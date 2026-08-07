@@ -63,8 +63,8 @@ cp .env.example .env
 
 Now open `.env` in any text editor and fill in:
 
-- **OPENAI_API_KEY** — required. Get one at https://platform.openai.com/api-keys
-  (you'll need to add a small amount of billing credit — a few dollars covers a hackathon)
+- **GROQ_API_KEY** — required. Get one free at https://console.groq.com/keys
+- **GEMINI_API_KEY** — required (used for embeddings). Get one free at https://aistudio.google.com/apikey
 - **GITHUB_TOKEN** — optional but recommended. Get one at https://github.com/settings/tokens
   → "Generate new token (classic)" → check the `repo` box → generate.
   Without this, you can still use public repos but you'll hit GitHub's rate limit quickly.
@@ -97,7 +97,7 @@ The order to try things in:
 
 ## Common problems
 
-- **"OPENAI_API_KEY is not set"** — you forgot step 4, or forgot to save `.env`
+- **Auth/API errors from Groq or Gemini** — you forgot step 4, or forgot to save `.env`
 - **GitHub rate limit errors** — add a `GITHUB_TOKEN` (step 4)
 - **Indexing takes a while / costs API credit** — this is normal; each file
   gets split into chunks and each chunk calls the embeddings API. Start with
