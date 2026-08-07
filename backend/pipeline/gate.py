@@ -9,6 +9,8 @@ against its own dataset, so there's nothing extra to build for it here.
 """
 from __future__ import annotations
 
+from functools import lru_cache
+
 from config import load_prompt
 from clients.llm_client import extract_json, complete
 from observability.tracer import trace
@@ -17,6 +19,7 @@ _VALID_ROUTES = {"vector", "graph", "hybrid"}
 _GATE_FIELDS = ("clarity", "scope", "answerability", "specificity")
 
 
+@lru_cache(maxsize=256)
 def run_gate(query: str) -> dict:
     """Returns:
         {passed, clarity, scope, answerability, specificity,
@@ -24,6 +27,10 @@ def run_gate(query: str) -> dict:
 
     `reason` is only meaningful when passed is False. A response that can't
     be parsed at all fails closed rather than defaulting to passed.
+
+    Cached by exact query text: classification is a pure function of the
+    question at temperature=0.1, and repeat questions are common in a demo
+    session. A cache hit also means no duplicate trace line is written.
     """
     prompt = load_prompt("council").format(query=query)
     raw_output, latency_ms = complete(prompt, temperature=0.1)

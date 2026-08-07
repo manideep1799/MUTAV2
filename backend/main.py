@@ -8,13 +8,16 @@ Architecture matches TEMPPP design spec.
 """
 from __future__ import annotations
 
+import json
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from config import settings
 from indexing import index_repo
-from rag_qa import ask_question
+from rag_qa import ask_question_stream
 from pipeline.gate import run_gate
 from issue_recommendation import recommend_issue
 from learning_roadmap import generate_roadmap
@@ -105,29 +108,53 @@ def index_endpoint(req: IndexRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+_META_MARKER = "\n\n<<<META>>>"
+
+
 @app.post("/ask")
 def ask_endpoint(req: AskRequest):
-    """Council-gated hybrid RAG Q&A — repo must already be indexed.
+    """Council-gated, streamed hybrid RAG Q&A — repo must already be indexed.
 
     The council gate (Mutagent target #2/#4) classifies the question first.
     A question that fails clarity/scope/answerability/specificity is
-    rejected with a reason before retrieval ever runs.
+    rejected as plain JSON ({answer, sources: [], passed: false, reason,
+    classification}) with no retrieval or LLM call. A passing question
+    streams the answer as plain text as the LLM generates it, followed by
+    a "\\n\\n<<<META>>>{json}" trailer carrying sources/route/sub_queries —
+    the frontend tells the two response shapes apart by Content-Type
+    (application/json vs text/plain).
     """
     gate = run_gate(req.question)
     if not gate["passed"]:
         return {
+            "answer": f"I can't answer that as asked — {gate['reason']}",
+            "sources": [],
             "passed": False,
             "reason": gate["reason"],
             "classification": {field: gate[field] for field in
                                 ("clarity", "scope", "answerability", "specificity")},
+            "route": gate["route"],
+            "sub_queries": gate["sub_queries"],
         }
 
+    stream = ask_question_stream(req.repo_url, req.question,
+                                  route=gate["route"], sub_queries=gate["sub_queries"])
     try:
-        result = ask_question(req.repo_url, req.question, route=gate["route"])
+        # Retrieval + the first streamed token happen here, up front — this is what
+        # surfaces "repo not indexed" as a real 400 instead of a broken stream.
+        first_piece = next(stream)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    return {"passed": True, "route": gate["route"], "sub_queries": gate["sub_queries"], **result}
+    def generate():
+        piece = first_piece
+        while not isinstance(piece, list):
+            yield piece
+            piece = next(stream)
+        meta = {"passed": True, "route": gate["route"], "sub_queries": gate["sub_queries"], "sources": piece}
+        yield _META_MARKER + json.dumps(meta)
+
+    return StreamingResponse(generate(), media_type="text/plain")
 
 
 @app.post("/recommend-issue")

@@ -308,18 +308,89 @@ function AskPanel({ repoUrl }: { repoUrl: string }) {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: q }]);
     setLoading(true);
+
     try {
-      const r = await apiFetch<AskResp>("/ask", {
-        method: "POST",
-        body: JSON.stringify({ repo_url: repoUrl, question: q }),
+      let res: Response;
+      try {
+        res = await fetch(`${API}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repo_url: repoUrl, question: q }),
+        });
+      } catch {
+        throw new Error("Could not reach backend at http://127.0.0.1:8000");
+      }
+      if (!res.ok) {
+        let msg = `Request failed (${res.status})`;
+        try {
+          const body = await res.json();
+          msg = body.detail || body.error || body.message || msg;
+        } catch {
+          // ignore
+        }
+        throw new Error(msg);
+      }
+
+      // The council gate rejects a question as plain JSON (no stream, no LLM
+      // call). A passing question streams back as text/plain instead.
+      const isJson = (res.headers.get("content-type") || "").includes("application/json");
+      if (isJson) {
+        const body: AskResp = await res.json();
+        setMessages((m) => [...m, { role: "assistant", content: body.answer, sources: body.sources || [] }]);
+        return;
+      }
+
+      // Streamed answer: grow one assistant bubble as tokens arrive, then peel
+      // the "\n\n<<<META>>>{json}" trailer off the end for sources.
+      setMessages((m) => [...m, { role: "assistant", content: "", sources: [] }]);
+      const marker = "\n\n<<<META>>>";
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const markerIdx = buffer.indexOf(marker);
+        const visible = markerIdx === -1 ? buffer : buffer.slice(0, markerIdx);
+        setMessages((m) => {
+          const next = [...m];
+          next[next.length - 1] = { role: "assistant", content: visible, sources: [] };
+          return next;
+        });
+      }
+
+      const markerIdx = buffer.indexOf(marker);
+      const finalText = markerIdx === -1 ? buffer : buffer.slice(0, markerIdx);
+      let sources: string[] = [];
+      if (markerIdx !== -1) {
+        try {
+          sources = JSON.parse(buffer.slice(markerIdx + marker.length)).sources || [];
+        } catch {
+          // malformed trailer — keep the text we already streamed, just skip sources
+        }
+      }
+      setMessages((m) => {
+        const next = [...m];
+        next[next.length - 1] = { role: "assistant", content: finalText, sources };
+        return next;
       });
-      setMessages((m) => [...m, { role: "assistant", content: r.answer, sources: r.sources || [] }]);
     } catch (err) {
       setMessages((m) => [...m, { role: "error", content: (err as Error).message }]);
     } finally {
       setLoading(false);
     }
   };
+
+  // Hide the "thinking" spinner once the streamed answer bubble has visible text.
+  let showThinking = loading;
+  if (loading && messages.length > 0) {
+    const last = messages[messages.length - 1];
+    if (last.role === "assistant" && last.content !== "") {
+      showThinking = false;
+    }
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-260px)] min-h-[500px]">
@@ -333,7 +404,7 @@ function AskPanel({ repoUrl }: { repoUrl: string }) {
         {messages.map((m, i) => (
           <MessageBubble key={i} message={m} />
         ))}
-        {loading && (
+        {showThinking && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner /> <span className="mono text-xs">thinking…</span>
           </div>
