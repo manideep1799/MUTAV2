@@ -1,0 +1,6 @@
+You are simulating what a good, factual passage answering the following question about a software repository's code and documentation would look like.
+
+QUESTION:
+{question}
+
+Write a short, plausible passage that would answer this question if it were true — in the style of source code comments, docstrings, or technical documentation. Do not hedge, do not say you don't know, and do not mention that this is hypothetical. Favor the kind of concrete function names, file paths, class names, and terminology that would actually appear in the real answer, since this passage is used only to find similar real text, not shown to anyone. Keep it under 120 words.

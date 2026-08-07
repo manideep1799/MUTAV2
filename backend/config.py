@@ -39,6 +39,8 @@ class Settings:
     CHUNK_SIZE: int   = int(os.getenv("CHUNK_SIZE", "500"))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "50"))
 
+    HYDE_ENABLED: bool = os.getenv("HYDE_ENABLED", "true").lower() == "true"
+
 
 settings = Settings()
 
