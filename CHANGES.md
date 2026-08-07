@@ -308,3 +308,53 @@ cleanly with `GEMINI_API_KEY` absent from `settings` altogether. Indexing
 a real repo will now download `BAAI/bge-base-en-v1.5` on first use (a few
 hundred MB, one-time, then fully offline) instead of calling out to
 Gemini per chunk.
+
+---
+
+## 9. B2B frontend panels (`src/routes/index.tsx`)
+
+Everything in §6's B2B build-out only existed as backend endpoints,
+exercised via raw API calls — the actual chat UI never had a B2B surface.
+Added a new "B2B" tab alongside the existing seven (Ask, Issues, Roadmap,
+PR Check, Blast Radius, Maintainer Health, Metrics), with its own
+sub-navigation:
+
+- **Team Setup** — list/create organizations, register the currently
+  indexed repo under one, create/list members.
+- **Roster** (`GET /b2b/orgs/{id}/roster`) — the manager view: one card
+  per member with open-assignment count, PR-ready rate, roadmap status,
+  and an inline "Assign issue" button that calls
+  `POST /b2b/members/{id}/assign` and refreshes.
+- **Tag Issues** — team-lead tagging UI against
+  `POST /b2b/orgs/{id}/issues/tag`, with the existing tag list shown
+  below the form.
+- **Test Selection** / **Reviewer Routing** — same input pattern as the
+  existing Blast Radius panel (comma-separated target files, max-hops
+  slider), calling the two endpoints fixed in §6.1.
+- **Governance** — `GET /b2b/governance-report` rendered in the same
+  table style as the existing Metrics panel, including the caveats list
+  (dataset/rubric version nulls, the generation-model note) rather than
+  hiding them.
+
+No new UI library — matches the existing file's conventions exactly:
+raw Tailwind classes (not the shadcn/ui components sitting unused in
+`src/components/ui/`, since the existing panels don't use them either),
+the same `apiFetch` helper, and the same `SectionHeader`/`ErrorBox`/
+`Spinner`/`Skeleton` primitives. `GET /b2b/team-health` got no dedicated
+panel — it's a zero-logic alias of `GET /maintainer-health`, and the
+existing Maintainer Health tab already demonstrates that exact response
+shape, so a second identical-looking panel would add nothing.
+
+**Verified for real, not just by inspection:** this sandbox has no
+persistent frontend toolchain, so `npm install react-markdown --no-save`
+was used one-time purely to unblock a type-check (the project's
+`node_modules` was otherwise already present but missing that one
+package — an artifact of this sandbox, not the real repo). With that in
+place: `npx tsc --noEmit -p tsconfig.json` passes with **zero errors**
+against the whole file in strict mode, and `npx eslint` reports zero
+new issues (the one pre-existing `no-explicit-any` warning is in
+`RoadmapPanel`, code this change never touched). Ran `npx prettier
+--write` to match the file's existing formatting exactly. That
+`react-markdown` install was `--no-save` and touched nothing in
+`package.json`/`package-lock.json` — confirmed via `git status` showing
+only `index.tsx` changed.

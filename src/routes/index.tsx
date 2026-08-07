@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 
 const API = "http://127.0.0.1:8000";
 
-type Section = "ask" | "issues" | "roadmap" | "pr" | "blast" | "health" | "metrics";
+type Section = "ask" | "issues" | "roadmap" | "pr" | "blast" | "health" | "metrics" | "b2b";
 
 type IndexResp = { files_indexed: number; chunks_created: number; total_repo_files: number };
 type AskResp = { answer: string; sources: string[] };
@@ -58,6 +58,89 @@ type MetricsResp = {
     optimized?: boolean;
     mean_f1?: number;
   }[];
+};
+
+/* ---- B2B types ---- */
+type B2BOrg = {
+  id: number;
+  name: string;
+  test_selection_threshold: number;
+  reviewer_routing_enabled: number;
+  created_at: string;
+};
+type B2BMember = {
+  id: number;
+  org_id: number;
+  name: string;
+  email: string;
+  skill_profile: string;
+  created_at: string;
+};
+type B2BTaggedIssue = {
+  id: number;
+  org_id: number;
+  repo_url: string;
+  issue_number: number;
+  tag: string;
+  subsystem: string;
+  tagged_by: string;
+  created_at: string;
+};
+type B2BAssignedIssue = {
+  id: number;
+  member_id: number;
+  repo_url: string;
+  issue_number: number | null;
+  issue_title: string;
+  rationale: string;
+  status: string;
+  created_at: string;
+};
+type B2BRoadmapStatus = { member_id: number; repo_url: string; status: string; updated_at: string };
+type B2BRosterEntry = {
+  member: B2BMember;
+  assigned_issues: B2BAssignedIssue[];
+  open_assignment_count: number;
+  roadmap_status: B2BRoadmapStatus[];
+  pr_readiness_history: {
+    verdict: string | null;
+    diff_size_lines: number;
+    has_tests: number;
+    created_at: string;
+  }[];
+  pr_ready_rate: number | null;
+};
+type B2BTestSelectionResp = {
+  tests: { path: string; hops: number; reason: string }[];
+  total_tests: number;
+  selected: number;
+  ratio: string;
+  error?: string | null;
+  disclaimer: string;
+};
+type B2BReviewerResp = {
+  reviewers: { login: string; files_touched: number; score: number; last_touched: string | null }[];
+  blast_radius_size: number;
+  error: string | null;
+};
+type B2BGovernanceResp = {
+  generated_at: string;
+  generation_model_note: string;
+  components: {
+    component: string;
+    name: string;
+    priority: string;
+    evaluated: boolean;
+    last_evaluated: string | null;
+    baseline_score?: number;
+    current_score?: number;
+    delta?: number;
+    mean_f1?: number;
+    trace_count: number;
+    dataset_version: string | null;
+    rubric_version: string | null;
+  }[];
+  caveats: string[];
 };
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -150,8 +233,8 @@ function IndexScreen({
               <span className="text-muted-foreground">in minutes.</span>
             </h1>
             <p className="mt-4 text-muted-foreground max-w-lg">
-              Index a GitHub repo, then ask questions, get issue recommendations,
-              generate a learning roadmap, and check PR readiness.
+              Index a GitHub repo, then ask questions, get issue recommendations, generate a
+              learning roadmap, and check PR readiness.
             </p>
           </div>
 
@@ -194,10 +277,7 @@ function IndexScreen({
               { k: "PR Check", d: "Diff readiness report" },
               { k: "Blast", d: "Structural impact analysis" },
             ].map((x) => (
-              <div
-                key={x.k}
-                className="p-4 rounded-md border border-border bg-card"
-              >
+              <div key={x.k} className="p-4 rounded-md border border-border bg-card">
                 <div className="mono text-xs text-accent">{x.k}</div>
                 <div className="text-xs text-muted-foreground mt-1">{x.d}</div>
               </div>
@@ -231,6 +311,7 @@ function Workspace({
     { key: "blast", label: "Blast Radius" },
     { key: "health", label: "Maintainer Health" },
     { key: "metrics", label: "Metrics" },
+    { key: "b2b", label: "B2B" },
   ];
 
   return (
@@ -242,7 +323,8 @@ function Workspace({
             <div className="mono text-xs text-muted-foreground">INDEXED REPOSITORY</div>
             <div className="mono text-sm text-foreground truncate mt-0.5">{repoName}</div>
             <div className="mono text-xs text-muted-foreground mt-1">
-              {stats.files_indexed} / {stats.total_repo_files} files indexed · {stats.chunks_created} chunks
+              {stats.files_indexed} / {stats.total_repo_files} files indexed ·{" "}
+              {stats.chunks_created} chunks
             </div>
           </div>
           <button
@@ -278,6 +360,7 @@ function Workspace({
           {section === "blast" && <BlastPanel repoUrl={repoUrl} />}
           {section === "health" && <HealthPanel repoUrl={repoUrl} />}
           {section === "metrics" && <MetricsPanel />}
+          {section === "b2b" && <B2BPanel repoUrl={repoUrl} />}
         </div>
       </main>
     </div>
@@ -336,7 +419,10 @@ function AskPanel({ repoUrl }: { repoUrl: string }) {
       const isJson = (res.headers.get("content-type") || "").includes("application/json");
       if (isJson) {
         const body: AskResp = await res.json();
-        setMessages((m) => [...m, { role: "assistant", content: body.answer, sources: body.sources || [] }]);
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: body.answer, sources: body.sources || [] },
+        ]);
         return;
       }
 
@@ -397,8 +483,8 @@ function AskPanel({ repoUrl }: { repoUrl: string }) {
       <div ref={scrollRef} className="flex-1 overflow-y-auto pr-2 space-y-6">
         {messages.length === 0 && (
           <div className="text-center py-16 text-muted-foreground text-sm">
-            Ask anything about this repository — architecture, files, how to run it, where a
-            feature lives…
+            Ask anything about this repository — architecture, files, how to run it, where a feature
+            lives…
           </div>
         )}
         {messages.map((m, i) => (
@@ -518,7 +604,13 @@ function IssuesPanel({ repoUrl }: { repoUrl: string }) {
           disabled={loading}
           className="px-5 py-3 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition inline-flex items-center gap-2"
         >
-          {loading ? <><Spinner /> Matching…</> : "Recommend an issue"}
+          {loading ? (
+            <>
+              <Spinner /> Matching…
+            </>
+          ) : (
+            "Recommend an issue"
+          )}
         </button>
       </div>
 
@@ -687,23 +779,29 @@ function PRPanel() {
         </button>
       </form>
 
-      {error && <div className="mt-4"><ErrorBox message={error} /></div>}
+      {error && (
+        <div className="mt-4">
+          <ErrorBox message={error} />
+        </div>
+      )}
 
       {result && !loading && (
         <div className="mt-8 space-y-6">
           {result.verdict && (
-            <div className={`px-4 py-3 rounded-md text-sm font-medium mono border ${
-              result.verdict === "ready" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-              result.verdict === "blocked" ? "bg-red-500/10 text-red-500 border-red-500/20" :
-              "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-            }`}>
+            <div
+              className={`px-4 py-3 rounded-md text-sm font-medium mono border ${
+                result.verdict === "ready"
+                  ? "bg-green-500/10 text-green-500 border-green-500/20"
+                  : result.verdict === "blocked"
+                    ? "bg-red-500/10 text-red-500 border-red-500/20"
+                    : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+              }`}
+            >
               VERDICT: {result.verdict.toUpperCase().replace("_", " ")}
             </div>
           )}
           <div>
-            <div className="mono text-xs text-muted-foreground mb-3 tracking-widest">
-              CHECKLIST
-            </div>
+            <div className="mono text-xs text-muted-foreground mb-3 tracking-widest">CHECKLIST</div>
             <div className="grid sm:grid-cols-2 gap-2">
               <CheckRow label="Has tests" pass={result.checklist.has_tests} />
               <CheckRow label="Touches docs" pass={result.checklist.touches_docs} />
@@ -712,10 +810,7 @@ function PRPanel() {
                 neutral
                 value={`${result.checklist.diff_size_lines} lines`}
               />
-              <CheckRow
-                label="Diff size acceptable"
-                pass={!result.checklist.is_large_diff}
-              />
+              <CheckRow label="Diff size acceptable" pass={!result.checklist.is_large_diff} />
               {result.checklist.touches_security_sensitive_path !== undefined && (
                 <CheckRow
                   label="Security sensitive path"
@@ -758,9 +853,7 @@ function CheckRow({
       ) : (
         <span
           className={`mono text-xs px-2 py-1 rounded inline-flex items-center gap-1.5 ${
-            pass
-              ? "bg-success/15 text-success"
-              : "bg-destructive/15 text-destructive"
+            pass ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
           }`}
           style={{
             color: pass ? "var(--color-success)" : "var(--color-destructive)",
@@ -796,7 +889,10 @@ function BlastPanel({ repoUrl }: { repoUrl: string }) {
     setError(null);
     setResult(null);
     try {
-      const targetList = targets.split(",").map((t) => t.trim()).filter(Boolean);
+      const targetList = targets
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       const r = await apiFetch<BlastResp>("/blast-radius", {
         method: "POST",
         body: JSON.stringify({ repo_url: repoUrl, targets: targetList, max_hops: maxHops }),
@@ -864,19 +960,28 @@ function BlastPanel({ repoUrl }: { repoUrl: string }) {
         </div>
       </form>
 
-      {error && <div className="mt-4"><ErrorBox message={error} /></div>}
+      {error && (
+        <div className="mt-4">
+          <ErrorBox message={error} />
+        </div>
+      )}
 
       {result && !loading && (
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <div className="mono text-xs text-muted-foreground tracking-widest">
-              IMPACTED FILES ({result.nodes.length}{result.truncated ? "+" : ""})
+              IMPACTED FILES ({result.nodes.length}
+              {result.truncated ? "+" : ""})
             </div>
-            <div className={`mono text-xs px-2 py-1 rounded border ${
-              result.coverage_tier === "deep" ? "bg-success/15 text-success border-success/20" : 
-              result.coverage_tier === "occurrence-only" ? "bg-yellow-500/15 text-yellow-500 border-yellow-500/20" :
-              "bg-destructive/15 text-destructive border-destructive/20"
-            }`}>
+            <div
+              className={`mono text-xs px-2 py-1 rounded border ${
+                result.coverage_tier === "deep"
+                  ? "bg-success/15 text-success border-success/20"
+                  : result.coverage_tier === "occurrence-only"
+                    ? "bg-yellow-500/15 text-yellow-500 border-yellow-500/20"
+                    : "bg-destructive/15 text-destructive border-destructive/20"
+              }`}
+            >
               Tier: {result.coverage_tier}
             </div>
           </div>
@@ -889,15 +994,24 @@ function BlastPanel({ repoUrl }: { repoUrl: string }) {
             ) : (
               <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
                 {result.nodes.map((node, idx) => (
-                  <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/50 transition">
+                  <div
+                    key={idx}
+                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/50 transition"
+                  >
                     <div className="min-w-0">
                       <div className="mono text-sm text-foreground truncate">{node.path}</div>
-                      <div className="text-xs text-muted-foreground mt-1 truncate">{node.reason}</div>
+                      <div className="text-xs text-muted-foreground mt-1 truncate">
+                        {node.reason}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className={`mono text-xs px-2 py-1 rounded ${
-                        node.kind === "import" ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"
-                      }`}>
+                      <span
+                        className={`mono text-xs px-2 py-1 rounded ${
+                          node.kind === "import"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-primary/10 text-primary"
+                        }`}
+                      >
                         {node.kind}
                       </span>
                       <span className="mono text-xs text-muted-foreground w-16 text-right">
@@ -942,10 +1056,16 @@ function HealthPanel({ repoUrl }: { repoUrl: string }) {
     }
   };
 
-  const scoreColor = result === null ? "text-muted-foreground" :
-    result.score === null ? "text-muted-foreground" :
-    result.score >= 0.7 ? "text-green-500" :
-    result.score >= 0.4 ? "text-yellow-500" : "text-red-500";
+  const scoreColor =
+    result === null
+      ? "text-muted-foreground"
+      : result.score === null
+        ? "text-muted-foreground"
+        : result.score >= 0.7
+          ? "text-green-500"
+          : result.score >= 0.4
+            ? "text-yellow-500"
+            : "text-red-500";
 
   return (
     <div className="max-w-4xl">
@@ -959,7 +1079,15 @@ function HealthPanel({ repoUrl }: { repoUrl: string }) {
         disabled={loading}
         className="px-5 py-3 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition inline-flex items-center gap-2 mb-6"
       >
-        {loading ? <><Spinner /> Scanning issues…</> : result ? "Re-scan" : "Scan repository"}
+        {loading ? (
+          <>
+            <Spinner /> Scanning issues…
+          </>
+        ) : result ? (
+          "Re-scan"
+        ) : (
+          "Scan repository"
+        )}
       </button>
 
       {error && <ErrorBox message={error} />}
@@ -968,21 +1096,27 @@ function HealthPanel({ repoUrl }: { repoUrl: string }) {
         <div className="space-y-6">
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="p-5 rounded-md border border-border bg-card">
-              <div className="mono text-[10px] text-muted-foreground mb-2 tracking-widest">HEALTH SCORE</div>
+              <div className="mono text-[10px] text-muted-foreground mb-2 tracking-widest">
+                HEALTH SCORE
+              </div>
               <div className={`text-3xl font-bold mono ${scoreColor}`}>
                 {result.score === null ? "—" : `${(result.score * 100).toFixed(0)}%`}
               </div>
               <div className="text-xs text-muted-foreground mt-1">of issues classified healthy</div>
             </div>
             <div className="p-5 rounded-md border border-border bg-card">
-              <div className="mono text-[10px] text-muted-foreground mb-2 tracking-widest">MEDIAN LATENCY</div>
+              <div className="mono text-[10px] text-muted-foreground mb-2 tracking-widest">
+                MEDIAN LATENCY
+              </div>
               <div className="text-3xl font-bold mono">
                 {result.latency_days === null ? "—" : `${result.latency_days}d`}
               </div>
               <div className="text-xs text-muted-foreground mt-1">creation → last update</div>
             </div>
             <div className="p-5 rounded-md border border-border bg-card">
-              <div className="mono text-[10px] text-muted-foreground mb-2 tracking-widest">ISSUES SCANNED</div>
+              <div className="mono text-[10px] text-muted-foreground mb-2 tracking-widest">
+                ISSUES SCANNED
+              </div>
               <div className="text-3xl font-bold mono">{result.scanned}</div>
               <div className="text-xs text-muted-foreground mt-1">open issues analyzed</div>
             </div>
@@ -1046,10 +1180,13 @@ function MetricsPanel() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const priorityColor = (p: string) =>
-    p === "critical" ? "text-red-500 bg-red-500/10 border-red-500/20" :
-    p === "high" ? "text-orange-500 bg-orange-500/10 border-orange-500/20" :
-    p === "medium" ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20" :
-    "text-muted-foreground bg-muted border-border";
+    p === "critical"
+      ? "text-red-500 bg-red-500/10 border-red-500/20"
+      : p === "high"
+        ? "text-orange-500 bg-orange-500/10 border-orange-500/20"
+        : p === "medium"
+          ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20"
+          : "text-muted-foreground bg-muted border-border";
 
   return (
     <div className="max-w-5xl">
@@ -1070,7 +1207,9 @@ function MetricsPanel() {
 
       {loading && !result && (
         <div className="space-y-2">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
         </div>
       )}
 
@@ -1079,12 +1218,24 @@ function MetricsPanel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">TARGET</th>
-                <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">PRIORITY</th>
-                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">TRACES</th>
-                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">BASELINE</th>
-                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">OPTIMIZED</th>
-                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">DELTA</th>
+                <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                  TARGET
+                </th>
+                <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                  PRIORITY
+                </th>
+                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                  TRACES
+                </th>
+                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                  BASELINE
+                </th>
+                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                  OPTIMIZED
+                </th>
+                <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                  DELTA
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -1095,22 +1246,32 @@ function MetricsPanel() {
                     <div className="mono text-[10px] text-muted-foreground">{t.id}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`mono text-[10px] px-2 py-0.5 rounded border ${priorityColor(t.priority)}`}>
+                    <span
+                      className={`mono text-[10px] px-2 py-0.5 rounded border ${priorityColor(t.priority)}`}
+                    >
                       {t.priority}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right mono text-xs text-muted-foreground">{t.trace_count}</td>
-                  <td className="px-4 py-3 text-right mono text-xs">
-                    {t.baseline_score !== undefined ? `${(t.baseline_score * 100).toFixed(0)}%` :
-                     t.mean_f1 !== undefined ? `F1 ${t.mean_f1.toFixed(2)}` : "—"}
+                  <td className="px-4 py-3 text-right mono text-xs text-muted-foreground">
+                    {t.trace_count}
                   </td>
                   <td className="px-4 py-3 text-right mono text-xs">
-                    {t.optimized_score !== undefined ? `${(t.optimized_score * 100).toFixed(0)}%` : "—"}
+                    {t.baseline_score !== undefined
+                      ? `${(t.baseline_score * 100).toFixed(0)}%`
+                      : t.mean_f1 !== undefined
+                        ? `F1 ${t.mean_f1.toFixed(2)}`
+                        : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right mono text-xs">
+                    {t.optimized_score !== undefined
+                      ? `${(t.optimized_score * 100).toFixed(0)}%`
+                      : "—"}
                   </td>
                   <td className="px-4 py-3 text-right mono text-xs">
                     {t.delta !== undefined && t.delta !== null ? (
                       <span className={t.delta >= 0 ? "text-green-500" : "text-red-500"}>
-                        {t.delta >= 0 ? "+" : ""}{(t.delta * 100).toFixed(0)}%
+                        {t.delta >= 0 ? "+" : ""}
+                        {(t.delta * 100).toFixed(0)}%
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -1124,8 +1285,998 @@ function MetricsPanel() {
       )}
 
       <p className="text-xs text-muted-foreground mt-4 mono">
-        Scores read from <code>backend/mutagent/reports/*.delta.json</code> — run Mutagent optimize to populate.
+        Scores read from <code>backend/mutagent/reports/*.delta.json</code> — run Mutagent optimize
+        to populate.
       </p>
+    </div>
+  );
+}
+
+/* ---------------- B2B ---------------- */
+
+type B2BSubSection =
+  "team" | "roster" | "tags" | "test-selection" | "reviewer-routing" | "governance";
+
+function B2BPanel({ repoUrl }: { repoUrl: string }) {
+  const [orgId, setOrgId] = useState<number | null>(null);
+  const [orgName, setOrgName] = useState<string | null>(null);
+  const [sub, setSub] = useState<B2BSubSection>("team");
+
+  const subTabs: { key: B2BSubSection; label: string }[] = [
+    { key: "team", label: "Team Setup" },
+    { key: "roster", label: "Roster" },
+    { key: "tags", label: "Tag Issues" },
+    { key: "test-selection", label: "Test Selection" },
+    { key: "reviewer-routing", label: "Reviewer Routing" },
+    { key: "governance", label: "Governance" },
+  ];
+
+  return (
+    <div>
+      <SectionHeader
+        title="B2B / Enterprise"
+        description="Same engine as above — organization/team roster, change-impact tooling, and governance evidence, framed for engineering leadership instead of an individual contributor."
+      />
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {subTabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setSub(t.key)}
+            className={`px-3 py-1.5 rounded-md text-xs mono border transition ${
+              sub === t.key
+                ? "bg-accent text-accent-foreground border-accent"
+                : "border-border bg-card text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {orgId !== null && (
+        <div className="mb-6 px-3 py-2 rounded-md border border-border bg-card inline-flex items-center gap-3">
+          <span className="mono text-[10px] text-muted-foreground tracking-widest">ORG</span>
+          <span className="mono text-xs">
+            {orgName} (#{orgId})
+          </span>
+          <button
+            onClick={() => {
+              setOrgId(null);
+              setOrgName(null);
+            }}
+            className="mono text-xs text-muted-foreground hover:text-foreground"
+          >
+            change
+          </button>
+        </div>
+      )}
+
+      {sub === "team" && (
+        <B2BTeamPanel
+          repoUrl={repoUrl}
+          orgId={orgId}
+          orgName={orgName}
+          onOrgSelected={(id, name) => {
+            setOrgId(id);
+            setOrgName(name);
+          }}
+        />
+      )}
+      {sub === "roster" && <B2BRosterPanel orgId={orgId} />}
+      {sub === "tags" && <B2BTagPanel repoUrl={repoUrl} orgId={orgId} />}
+      {sub === "test-selection" && <B2BTestSelectionPanel repoUrl={repoUrl} />}
+      {sub === "reviewer-routing" && <B2BReviewerRoutingPanel repoUrl={repoUrl} />}
+      {sub === "governance" && <B2BGovernancePanel />}
+    </div>
+  );
+}
+
+function B2BTeamPanel({
+  repoUrl,
+  orgId,
+  orgName,
+  onOrgSelected,
+}: {
+  repoUrl: string;
+  orgId: number | null;
+  orgName: string | null;
+  onOrgSelected: (id: number, name: string) => void;
+}) {
+  const [orgs, setOrgs] = useState<B2BOrg[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [members, setMembers] = useState<B2BMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [memberName, setMemberName] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberSkills, setMemberSkills] = useState("");
+  const [creatingMember, setCreatingMember] = useState(false);
+
+  const [repoRegistered, setRepoRegistered] = useState(false);
+  const [registeringRepo, setRegisteringRepo] = useState(false);
+
+  const loadOrgs = async () => {
+    setLoadingOrgs(true);
+    setError(null);
+    try {
+      setOrgs(await apiFetch<B2BOrg[]>("/b2b/orgs"));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrgs();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const createOrg = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim()) return;
+    setCreatingOrg(true);
+    setError(null);
+    try {
+      const r = await apiFetch<B2BOrg>("/b2b/orgs", {
+        method: "POST",
+        body: JSON.stringify({ name: newOrgName.trim() }),
+      });
+      setNewOrgName("");
+      await loadOrgs();
+      onOrgSelected(r.id, r.name);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCreatingOrg(false);
+    }
+  };
+
+  const loadMembers = async (id: number) => {
+    setLoadingMembers(true);
+    try {
+      setMembers(await apiFetch<B2BMember[]>(`/b2b/orgs/${id}/members`));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (orgId !== null) loadMembers(orgId);
+  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const createMember = async (e: FormEvent) => {
+    e.preventDefault();
+    if (orgId === null || !memberName.trim() || !memberEmail.trim()) return;
+    setCreatingMember(true);
+    setError(null);
+    try {
+      await apiFetch<B2BMember>(`/b2b/orgs/${orgId}/members`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: memberName.trim(),
+          email: memberEmail.trim(),
+          skill_profile: memberSkills.trim(),
+        }),
+      });
+      setMemberName("");
+      setMemberEmail("");
+      setMemberSkills("");
+      await loadMembers(orgId);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCreatingMember(false);
+    }
+  };
+
+  const registerRepo = async () => {
+    if (orgId === null) return;
+    setRegisteringRepo(true);
+    setError(null);
+    try {
+      await apiFetch(`/b2b/orgs/${orgId}/repos`, {
+        method: "POST",
+        body: JSON.stringify({ repo_url: repoUrl }),
+      });
+      setRepoRegistered(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setRegisteringRepo(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl space-y-8">
+      {error && <ErrorBox message={error} />}
+
+      <div>
+        <div className="mono text-xs text-muted-foreground mb-3 tracking-widest">ORGANIZATION</div>
+        {orgId === null ? (
+          <div className="space-y-4">
+            {loadingOrgs ? (
+              <Skeleton className="h-10 w-full" />
+            ) : orgs.length > 0 ? (
+              <div className="grid sm:grid-cols-2 gap-2">
+                {orgs.map((o) => (
+                  <button
+                    key={o.id}
+                    onClick={() => onOrgSelected(o.id, o.name)}
+                    className="text-left px-4 py-3 rounded-md border border-border bg-card hover:bg-muted transition"
+                  >
+                    <div className="text-sm font-medium">{o.name}</div>
+                    <div className="mono text-xs text-muted-foreground">#{o.id}</div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No organizations yet — create one below.
+              </div>
+            )}
+
+            <form onSubmit={createOrg} className="flex gap-2">
+              <input
+                type="text"
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                placeholder="New organization name"
+                className="flex-1 px-4 py-2.5 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+                disabled={creatingOrg}
+              />
+              <button
+                type="submit"
+                disabled={creatingOrg || !newOrgName.trim()}
+                className="px-4 py-2.5 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+              >
+                {creatingOrg ? <Spinner /> : "Create"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            Working in <span className="text-foreground font-medium">{orgName}</span>.
+          </div>
+        )}
+      </div>
+
+      {orgId !== null && (
+        <>
+          <div>
+            <div className="mono text-xs text-muted-foreground mb-3 tracking-widest">
+              REGISTER THIS REPO
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="mono text-xs text-muted-foreground truncate">{repoUrl}</span>
+              <button
+                onClick={registerRepo}
+                disabled={registeringRepo}
+                className="px-3 py-1.5 rounded-md border border-border bg-card text-xs hover:bg-muted transition mono"
+              >
+                {registeringRepo
+                  ? "Registering…"
+                  : repoRegistered
+                    ? "Registered ✓"
+                    : "Register repo"}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="mono text-xs text-muted-foreground mb-3 tracking-widest">MEMBERS</div>
+            {loadingMembers ? (
+              <Skeleton className="h-16 w-full mb-4" />
+            ) : members.length > 0 ? (
+              <div className="border border-border rounded-md overflow-hidden bg-card divide-y divide-border mb-4">
+                {members.map((m) => (
+                  <div key={m.id} className="p-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">{m.name}</div>
+                      <div className="mono text-xs text-muted-foreground">
+                        {m.email}
+                        {m.skill_profile ? ` · ${m.skill_profile}` : ""}
+                      </div>
+                    </div>
+                    <span className="mono text-xs text-muted-foreground">#{m.id}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground mb-4">No members yet.</div>
+            )}
+
+            <form onSubmit={createMember} className="grid sm:grid-cols-3 gap-2">
+              <input
+                type="text"
+                value={memberName}
+                onChange={(e) => setMemberName(e.target.value)}
+                placeholder="Name"
+                className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+                disabled={creatingMember}
+              />
+              <input
+                type="email"
+                value={memberEmail}
+                onChange={(e) => setMemberEmail(e.target.value)}
+                placeholder="Email"
+                className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+                disabled={creatingMember}
+              />
+              <input
+                type="text"
+                value={memberSkills}
+                onChange={(e) => setMemberSkills(e.target.value)}
+                placeholder="Skills (e.g. python, react)"
+                className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+                disabled={creatingMember}
+              />
+              <button
+                type="submit"
+                disabled={creatingMember || !memberName.trim() || !memberEmail.trim()}
+                className="sm:col-span-3 px-4 py-2 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+              >
+                {creatingMember ? <Spinner /> : "Add member"}
+              </button>
+            </form>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function B2BRosterPanel({ orgId }: { orgId: number | null }) {
+  const [roster, setRoster] = useState<B2BRosterEntry[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState<number | null>(null);
+  const [assignRepo, setAssignRepo] = useState("");
+
+  const load = async () => {
+    if (orgId === null) return;
+    setLoading(true);
+    setError(null);
+    try {
+      setRoster(await apiFetch<B2BRosterEntry[]>(`/b2b/orgs/${orgId}/roster`));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const assign = async (memberId: number) => {
+    if (!assignRepo.trim()) return;
+    setAssigning(memberId);
+    setError(null);
+    try {
+      await apiFetch(`/b2b/members/${memberId}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ repo_url: assignRepo.trim() }),
+      });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setAssigning(null);
+    }
+  };
+
+  if (orgId === null) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        Select or create an organization in Team Setup first.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {error && (
+        <div className="mb-4">
+          <ErrorBox message={error} />
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-6 items-start sm:items-center">
+        <input
+          type="text"
+          value={assignRepo}
+          onChange={(e) => setAssignRepo(e.target.value)}
+          placeholder="repo_url for issue assignment (e.g. https://github.com/owner/repo)"
+          className="flex-1 px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+        />
+        <button
+          onClick={load}
+          className="px-3 py-2 rounded-md border border-border bg-card text-xs hover:bg-muted transition mono"
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      {loading && !roster && (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      )}
+
+      {roster && roster.length === 0 && (
+        <div className="text-sm text-muted-foreground">No members in this organization yet.</div>
+      )}
+
+      {roster && roster.length > 0 && (
+        <div className="space-y-4">
+          {roster.map((entry) => (
+            <div key={entry.member.id} className="p-5 rounded-md border border-border bg-card">
+              <div className="flex items-start justify-between mb-3 gap-3">
+                <div>
+                  <div className="text-sm font-semibold">{entry.member.name}</div>
+                  <div className="mono text-xs text-muted-foreground">{entry.member.email}</div>
+                  {entry.member.skill_profile && (
+                    <div className="mono text-xs text-muted-foreground mt-1">
+                      {entry.member.skill_profile}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => assign(entry.member.id)}
+                  disabled={assigning === entry.member.id || !assignRepo.trim()}
+                  className="px-3 py-1.5 rounded-md bg-accent text-accent-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 transition shrink-0"
+                >
+                  {assigning === entry.member.id ? <Spinner /> : "Assign issue"}
+                </button>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <div className="mono text-muted-foreground tracking-widest mb-1">
+                    OPEN ASSIGNMENTS
+                  </div>
+                  <div className="mono text-sm">{entry.open_assignment_count}</div>
+                </div>
+                <div>
+                  <div className="mono text-muted-foreground tracking-widest mb-1">
+                    PR READY RATE
+                  </div>
+                  <div className="mono text-sm">
+                    {entry.pr_ready_rate === null
+                      ? "—"
+                      : `${(entry.pr_ready_rate * 100).toFixed(0)}%`}
+                  </div>
+                </div>
+                <div>
+                  <div className="mono text-muted-foreground tracking-widest mb-1">
+                    ROADMAP STATUS
+                  </div>
+                  <div className="mono text-sm">
+                    {entry.roadmap_status.length === 0
+                      ? "—"
+                      : entry.roadmap_status.map((s) => s.status).join(", ")}
+                  </div>
+                </div>
+              </div>
+
+              {entry.assigned_issues.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                  {entry.assigned_issues.map((a) => (
+                    <div key={a.id} className="text-xs flex items-baseline gap-2">
+                      <span className="mono text-accent">
+                        {a.issue_number !== null ? `#${a.issue_number}` : "—"}
+                      </span>
+                      <span>{a.issue_title || "(no match found)"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function B2BTagPanel({ repoUrl, orgId }: { repoUrl: string; orgId: number | null }) {
+  const [tags, setTags] = useState<B2BTaggedIssue[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [issueNumber, setIssueNumber] = useState("");
+  const [tag, setTag] = useState("good-first-task");
+  const [subsystem, setSubsystem] = useState("");
+  const [taggedBy, setTaggedBy] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = async () => {
+    if (orgId === null) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await apiFetch<B2BTaggedIssue[]>(
+        `/b2b/orgs/${orgId}/issues/tags?repo_url=${encodeURIComponent(repoUrl)}`,
+      );
+      setTags(r);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (orgId === null || !issueNumber.trim() || !tag.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiFetch(`/b2b/orgs/${orgId}/issues/tag`, {
+        method: "POST",
+        body: JSON.stringify({
+          repo_url: repoUrl,
+          issue_number: parseInt(issueNumber, 10),
+          tag: tag.trim(),
+          subsystem: subsystem.trim(),
+          tagged_by: taggedBy.trim(),
+        }),
+      });
+      setIssueNumber("");
+      setSubsystem("");
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (orgId === null) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        Select or create an organization in Team Setup first.
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl">
+      {error && (
+        <div className="mb-4">
+          <ErrorBox message={error} />
+        </div>
+      )}
+
+      <form onSubmit={submit} className="grid sm:grid-cols-4 gap-2 mb-6">
+        <input
+          type="number"
+          value={issueNumber}
+          onChange={(e) => setIssueNumber(e.target.value)}
+          placeholder="Issue #"
+          className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+          disabled={submitting}
+        />
+        <input
+          type="text"
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+          placeholder="Tag (e.g. good-first-task)"
+          className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+          disabled={submitting}
+        />
+        <input
+          type="text"
+          value={subsystem}
+          onChange={(e) => setSubsystem(e.target.value)}
+          placeholder="Subsystem (optional)"
+          className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+          disabled={submitting}
+        />
+        <input
+          type="text"
+          value={taggedBy}
+          onChange={(e) => setTaggedBy(e.target.value)}
+          placeholder="Tagged by (optional)"
+          className="px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+          disabled={submitting}
+        />
+        <button
+          type="submit"
+          disabled={submitting || !issueNumber.trim() || !tag.trim()}
+          className="sm:col-span-4 px-4 py-2 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+        >
+          {submitting ? <Spinner /> : "Tag issue"}
+        </button>
+      </form>
+
+      {loading ? (
+        <Skeleton className="h-24 w-full" />
+      ) : tags.length > 0 ? (
+        <div className="border border-border rounded-md overflow-hidden bg-card divide-y divide-border">
+          {tags.map((t) => (
+            <div key={t.id} className="p-3 flex items-center justify-between text-sm">
+              <div className="flex items-baseline gap-2">
+                <span className="mono text-accent text-xs">#{t.issue_number}</span>
+                <span className="mono text-xs px-2 py-0.5 rounded border border-border bg-muted">
+                  {t.tag}
+                </span>
+                {t.subsystem && (
+                  <span className="text-xs text-muted-foreground">{t.subsystem}</span>
+                )}
+              </div>
+              {t.tagged_by && (
+                <span className="text-xs text-muted-foreground">by {t.tagged_by}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground">No tagged issues yet for this repo.</div>
+      )}
+    </div>
+  );
+}
+
+function B2BTestSelectionPanel({ repoUrl }: { repoUrl: string }) {
+  const [targets, setTargets] = useState("");
+  const [maxHops, setMaxHops] = useState(3);
+  const [result, setResult] = useState<B2BTestSelectionResp | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!targets.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const targetList = targets
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const r = await apiFetch<B2BTestSelectionResp>("/b2b/test-selection", {
+        method: "POST",
+        body: JSON.stringify({ repo_url: repoUrl, targets: targetList, max_hops: maxHops }),
+      });
+      setResult(r);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl">
+      <p className="text-sm text-muted-foreground mb-4">
+        Blast radius of the changed files, filtered to test files — "run these first, full suite on
+        merge," not a replacement for the full suite.
+      </p>
+
+      <form onSubmit={run} className="space-y-3 mb-6">
+        <input
+          type="text"
+          value={targets}
+          onChange={(e) => setTargets(e.target.value)}
+          placeholder="Changed files, comma-separated (e.g. src/auth.py, src/utils.py)"
+          className="mono w-full px-4 py-3 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+          disabled={loading}
+        />
+        <div>
+          <label className="mono text-xs text-muted-foreground">MAX HOPS: {maxHops}</label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={maxHops}
+            onChange={(e) => setMaxHops(parseInt(e.target.value, 10))}
+            className="w-full mt-2 accent-accent"
+            disabled={loading}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading || !targets.trim()}
+          className="px-5 py-3 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition inline-flex items-center gap-2"
+        >
+          {loading ? (
+            <>
+              <Spinner /> Selecting…
+            </>
+          ) : (
+            "Select tests"
+          )}
+        </button>
+      </form>
+
+      {error && <ErrorBox message={error} />}
+
+      {result && !loading && (
+        <div className="space-y-4">
+          <div className="mono text-sm">{result.ratio}</div>
+          <div className="p-3 rounded-md border border-border bg-card text-xs text-muted-foreground">
+            {result.disclaimer}
+          </div>
+          {result.tests.length > 0 ? (
+            <div className="border border-border rounded-md overflow-hidden bg-card divide-y divide-border">
+              {result.tests.map((t, i) => (
+                <div key={i} className="p-3 text-sm">
+                  <div className="mono text-xs">{t.path}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {t.reason} · hop {t.hops}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No tests fall within the blast radius of these files.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function B2BReviewerRoutingPanel({ repoUrl }: { repoUrl: string }) {
+  const [targets, setTargets] = useState("");
+  const [prAuthor, setPrAuthor] = useState("");
+  const [topN, setTopN] = useState(2);
+  const [result, setResult] = useState<B2BReviewerResp | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!targets.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const targetList = targets
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const r = await apiFetch<B2BReviewerResp>("/b2b/reviewer-routing", {
+        method: "POST",
+        body: JSON.stringify({
+          repo_url: repoUrl,
+          targets: targetList,
+          pr_author: prAuthor.trim() || null,
+          top_n: topN,
+        }),
+      });
+      setResult(r);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl">
+      <p className="text-sm text-muted-foreground mb-4">
+        Who owns the code in the blast radius, by recent commit authorship — no model call, fully
+        deterministic.
+      </p>
+
+      <form onSubmit={run} className="space-y-3 mb-6">
+        <input
+          type="text"
+          value={targets}
+          onChange={(e) => setTargets(e.target.value)}
+          placeholder="Changed files, comma-separated"
+          className="mono w-full px-4 py-3 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+          disabled={loading}
+        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={prAuthor}
+            onChange={(e) => setPrAuthor(e.target.value)}
+            placeholder="PR author to exclude (optional)"
+            className="flex-1 px-3 py-2 rounded-md bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+            disabled={loading}
+          />
+          <input
+            type="number"
+            min={1}
+            value={topN}
+            onChange={(e) => setTopN(parseInt(e.target.value, 10) || 1)}
+            className="w-24 px-3 py-2 rounded-md bg-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-ring transition"
+            disabled={loading}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading || !targets.trim()}
+          className="px-5 py-3 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition inline-flex items-center gap-2"
+        >
+          {loading ? (
+            <>
+              <Spinner /> Routing…
+            </>
+          ) : (
+            "Suggest reviewers"
+          )}
+        </button>
+      </form>
+
+      {error && <ErrorBox message={error} />}
+
+      {result && !loading && (
+        <div className="space-y-4">
+          <div className="mono text-xs text-muted-foreground">
+            Blast radius: {result.blast_radius_size} file{result.blast_radius_size === 1 ? "" : "s"}
+          </div>
+          {result.reviewers.length > 0 ? (
+            <div className="border border-border rounded-md overflow-hidden bg-card divide-y divide-border">
+              {result.reviewers.map((r, i) => (
+                <div key={i} className="p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">{r.login}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {r.files_touched} file{r.files_touched === 1 ? "" : "s"} touched
+                      {r.last_touched
+                        ? ` · last ${new Date(r.last_touched).toLocaleDateString()}`
+                        : ""}
+                    </div>
+                  </div>
+                  <span className="mono text-xs text-muted-foreground">
+                    score {r.score.toFixed(3)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No reviewers found in commit history for these files.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function B2BGovernancePanel() {
+  const [result, setResult] = useState<B2BGovernanceResp | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setResult(await apiFetch<B2BGovernanceResp>("/b2b/governance-report"));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const priorityColor = (p: string) =>
+    p === "critical"
+      ? "text-red-500 bg-red-500/10 border-red-500/20"
+      : p === "high"
+        ? "text-orange-500 bg-orange-500/10 border-orange-500/20"
+        : p === "medium"
+          ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20"
+          : "text-muted-foreground bg-muted border-border";
+
+  return (
+    <div className="max-w-5xl">
+      <button
+        onClick={load}
+        disabled={loading}
+        className="px-4 py-2 rounded-md border border-border bg-card text-xs hover:bg-muted transition mono mb-6"
+      >
+        {loading ? "Refreshing…" : "↻ Refresh"}
+      </button>
+
+      {error && <ErrorBox message={error} />}
+
+      {result && (
+        <div className="space-y-6">
+          <div className="p-4 rounded-md border border-border bg-card text-xs text-muted-foreground">
+            {result.generation_model_note}
+          </div>
+
+          <div className="border border-border rounded-md overflow-hidden bg-card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                    COMPONENT
+                  </th>
+                  <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                    PRIORITY
+                  </th>
+                  <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                    EVALUATED
+                  </th>
+                  <th className="px-4 py-3 text-left mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                    LAST EVALUATED
+                  </th>
+                  <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                    BASELINE
+                  </th>
+                  <th className="px-4 py-3 text-right mono text-[10px] text-muted-foreground tracking-widest font-normal">
+                    CURRENT
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {result.components.map((c) => (
+                  <tr key={c.component} className="hover:bg-muted/30 transition">
+                    <td className="px-4 py-3">
+                      <div className="mono text-xs font-medium">{c.name}</div>
+                      <div className="mono text-[10px] text-muted-foreground">{c.component}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`mono text-[10px] px-2 py-0.5 rounded border ${priorityColor(c.priority)}`}
+                      >
+                        {c.priority}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 mono text-xs">{c.evaluated ? "yes" : "no"}</td>
+                    <td className="px-4 py-3 mono text-xs text-muted-foreground">
+                      {c.last_evaluated ? new Date(c.last_evaluated).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right mono text-xs">
+                      {c.baseline_score !== undefined
+                        ? `${(c.baseline_score * 100).toFixed(0)}%`
+                        : c.mean_f1 !== undefined
+                          ? `F1 ${c.mean_f1.toFixed(2)}`
+                          : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right mono text-xs">
+                      {c.current_score !== undefined
+                        ? `${(c.current_score * 100).toFixed(0)}%`
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {result.caveats.length > 0 && (
+            <div>
+              <div className="mono text-xs text-muted-foreground mb-2 tracking-widest">CAVEATS</div>
+              <ul className="space-y-1.5">
+                {result.caveats.map((c, i) => (
+                  <li key={i} className="text-xs text-muted-foreground">
+                    · {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1133,13 +2284,19 @@ function MetricsPanel() {
 /* ---------------- Shared UI ---------------- */
 
 function TopBar() {
-  const [rateLimit, setRateLimit] = useState<{ limit: number; remaining: number; reset: string } | null>(null);
+  const [rateLimit, setRateLimit] = useState<{
+    limit: number;
+    remaining: number;
+    reset: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const checkRateLimit = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch<{ limit: number; remaining: number; reset: string }>("/rate-limit");
+      const data = await apiFetch<{ limit: number; remaining: number; reset: string }>(
+        "/rate-limit",
+      );
       setRateLimit(data);
     } catch (err) {
       console.error(err);
@@ -1157,25 +2314,27 @@ function TopBar() {
           </div>
           <span className="mono text-sm font-medium">mentor++</span>
         </div>
-        
+
         <div className="flex items-center gap-4">
           {rateLimit && (
-            <div className={`mono text-xs px-2 py-1 rounded border ${rateLimit.remaining > 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"}`}>
-              {rateLimit.remaining > 0 ? (
-                `API Usable: ${rateLimit.remaining}/${rateLimit.limit}`
-              ) : (
-                `Exhausted (Resets at ${new Date(rateLimit.reset).toLocaleTimeString()})`
-              )}
+            <div
+              className={`mono text-xs px-2 py-1 rounded border ${rateLimit.remaining > 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"}`}
+            >
+              {rateLimit.remaining > 0
+                ? `API Usable: ${rateLimit.remaining}/${rateLimit.limit}`
+                : `Exhausted (Resets at ${new Date(rateLimit.reset).toLocaleTimeString()})`}
             </div>
           )}
-          <button 
+          <button
             onClick={checkRateLimit}
             disabled={loading}
             className="mono text-xs text-muted-foreground hover:text-foreground transition flex items-center gap-1"
           >
             {loading ? "Checking..." : "Check Rate Limit"}
           </button>
-          <span className="mono text-xs text-muted-foreground ml-2 border-l border-border pl-4">v0.1 · local</span>
+          <span className="mono text-xs text-muted-foreground ml-2 border-l border-border pl-4">
+            v0.1 · local
+          </span>
         </div>
       </div>
     </header>
@@ -1201,11 +2360,7 @@ function Spinner() {
 }
 
 function Skeleton({ className = "" }: { className?: string }) {
-  return (
-    <div
-      className={`rounded bg-muted animate-pulse ${className}`}
-    />
-  );
+  return <div className={`rounded bg-muted animate-pulse ${className}`} />;
 }
 
 function ErrorBox({ message }: { message: string }) {
