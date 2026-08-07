@@ -172,6 +172,17 @@ def save_graph(graph: nx.DiGraph, repo_id: str) -> Path:
     return path
 
 
+def delete_graph(repo_id: str) -> bool:
+    """Purge a repo's persisted graph. Returns True if a file was removed.
+    Nothing currently calls this automatically — see B2B_AUDIT.md item 2."""
+    path = _graph_path(repo_id)
+    existed = path.exists()
+    if existed:
+        path.unlink()
+    load_graph.cache_clear()
+    return existed
+
+
 @functools.lru_cache(maxsize=32)
 def load_graph(repo_id: str) -> nx.DiGraph:
     """Load the persisted NetworkX graph for a repo. Cached across calls.

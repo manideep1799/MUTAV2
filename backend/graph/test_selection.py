@@ -13,9 +13,7 @@ from __future__ import annotations
 import re
 from pathlib import PurePosixPath
 
-import networkx as nx
-
-from backend.graph.blast_radius import _blast_radius_core
+from graph.blast_radius import _blast_radius_core
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +87,7 @@ def select_tests(
             "ratio": str,          # "4 of 200 tests"
         }
     """
-    from backend.graph.store import load_graph
+    from graph.store import load_graph
 
     try:
         graph = load_graph(repo_id)

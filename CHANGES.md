@@ -113,7 +113,7 @@ question
 HYDE_ENABLED=true   # set false to embed the raw question instead of a HyDE passage
 ```
 
-## Verifying it
+## Verifying it (parts 1-5)
 
 No network access to Groq/Ollama was available in the environment these
 changes were made in, so the retrieval/caching/streaming logic was
@@ -127,3 +127,108 @@ round-trips through JSON correctly. Worth a real end-to-end pass once a
 `POST /ask` calls through `/docs` or the chat UI — one normal question,
 one deliberately vague one (checks the gate rejects it), and one compound
 one (checks the fan-out).
+
+---
+
+## 6. B2B build-out, per `B2B_Implementation_Plan.md`
+
+Demo scope throughout: no auth/login, `org_id`/`member_id` passed as plain
+request params the same way `repo_url` already is. See `B2B_AUDIT.md` for
+what real multi-tenant auth would take.
+
+### 6.1 Fixed and wired two already-built, never-connected modules
+
+`graph/test_selection.py` (§3.2) and `graph/reviewer_routing.py` (§3.4)
+already implemented most of the plan — blast-radius-filtered test
+selection and commit-authorship-based reviewer suggestion — but both had
+`from backend.graph...`/`from backend.config...`-style imports that don't
+match how this app actually runs (no `backend.` package prefix anywhere
+else in the codebase), plus `reviewer_routing.py` called
+`settings.github_token` (lowercase; the real attribute is `GITHUB_TOKEN`).
+Neither was imported from `main.py` despite `graph/__init__.py`'s own
+docstring saying they should be. Fixed both bugs, wired them in as
+`POST /b2b/test-selection` and `POST /b2b/reviewer-routing`.
+
+### 6.2 Organization/Member data model (`backend/b2b/store.py`)
+
+Plain `sqlite3` (no ORM, matching the codebase's existing preference for
+the simplest tool that works — Chroma for vectors, JSON for the graph).
+Tables: `organizations`, `members`, `org_repos`, `tagged_issues`,
+`assigned_issues`, `pr_readiness_history`, `member_roadmap_status`. The
+last one is an addition beyond plan §2: `learning_roadmap.py`'s roadmap is
+stateless free text, not a checklist, so "per-member roadmap progress" is
+tracked as a status (`not_started`/`in_progress`/`completed`) per
+(member, repo) rather than an invented percentage.
+
+### 6.3 Ticket routing, tagging, manager view (§3.3) — `backend/b2b/`
+
+- `POST /b2b/orgs`, `/members`, `/repos` — plain CRUD over the tables above.
+- `POST /b2b/orgs/{id}/issues/tag` — team-lead tagging, once per issue
+  instead of re-explained per assignment.
+- `POST /b2b/members/{id}/assign` — reuses `recommend_issue()` **unchanged**
+  (including its issue_id-null safe-refusal behavior), then records the
+  result against the member.
+- `POST /b2b/members/{id}/pr-check` — reuses `check_pr_readiness()`
+  **unchanged**, then logs the verdict to `pr_readiness_history`.
+- `GET /b2b/orgs/{id}/roster` (`b2b/roster.py`) — composes member profile +
+  assignments + roadmap status + PR-readiness history into one payload,
+  replacing manual status-chasing across three separate queries.
+
+### 6.4 Governance dashboard + team health repoint (§3.5, §3.6)
+
+- `GET /b2b/governance-report` (`b2b/governance.py`) — reshapes the
+  existing `/metrics` payload for a compliance reviewer: per-component
+  score, baseline vs. current, last-evaluated timestamp (from the report
+  file's mtime). No new eval logic. Honestly reports `dataset_version`/
+  `rubric_version` as `null` (not tracked anywhere yet) instead of
+  fabricating them, and states the *actual* configured generation model
+  rather than assuming the single-model constraint always holds — see
+  `B2B_AUDIT.md` item 4 for why that distinction matters.
+- `GET /b2b/team-health` — thin alias over `get_maintainer_health()`
+  (zero new logic; it already works against any repo the token can reach,
+  public or private). The separate route exists so the internal-process-
+  health framing is legible in the API surface itself.
+
+### 6.5 Data-handling audit (§6) → `B2B_AUDIT.md`
+
+Read `tracer.py`, `vector_store.py`, `graph/store.py`, `config.py`,
+`embeddings.py`, and every `trace()` call site to answer the plan's four
+audit questions with citations, not assertions. Headline finding: **the
+plan's own §4 "self-hosted" row claims local BGE embeddings; the actual
+code (`embeddings.py`) calls Gemini's hosted embeddings API for every
+chunk.** Also shipped one concrete fix rather than only documenting the
+gap: `vector_store.delete_collection()` + `graph/store.delete_graph()` +
+`DELETE /index?repo_url=...`, since previously there was no way to purge
+an indexed repo's data at all. Verified end-to-end — the graph file is
+actually gone from disk after the call. The other three findings (trace
+retention, single global GitHub token, first-run network fetches for the
+reranker/tokenizer) are documented with the exact files/gaps but
+deliberately not "fixed" with something that would just be security
+theater (e.g. a plaintext per-org token column) — see the doc for why.
+
+### On the "Helix engine"
+
+Was asked to wire this build up to a Helix instance reachable via an
+ngrok URL (`spearmint-factoid-brewery.ngrok-free.dev`). That host is
+categorically unreachable from this sandbox — the egress proxy explicitly
+refuses ngrok tunnels (certificate-pinned clients), independent of which
+URL — confirmed via the proxy's own status endpoint before giving up on
+it, not assumed. Re-reading the plan: none of the four build-first items
+actually call into Helix at runtime; it's referenced only as how the core
+engine's *prompts* were tuned (§1) and as a future "Managed/hosted"
+deployment option (§4), not a runtime dependency of test selection,
+governance packaging, the roster view, or the audit. No stub/config slot
+was added for it — an unused `HELIX_BASE_URL` would be exactly the kind
+of dead configuration this codebase avoids elsewhere.
+
+### Verifying it (part 6)
+
+All new endpoints were exercised end-to-end with FastAPI's `TestClient`
+(external deps stubbed — no live GROQ/GEMINI/GITHUB credentials in this
+sandbox): full org → member → repo → tag → assign → pr-check → roster
+lifecycle, the `not_a_real_status` validation path (`400`), the
+not-yet-indexed path for test-selection/reviewer-routing (`400` with the
+real "Run /index first" message from `graph/store.py`), the governance
+report's shape, and the `DELETE /index` purge actually removing a graph
+file from disk. Not exercised against real Groq/GitHub APIs — do that
+before treating this as demo-ready.

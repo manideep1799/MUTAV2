@@ -15,9 +15,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
 
-import networkx as nx
-
-from backend.graph.blast_radius import _blast_radius_core
+from config import repo_id_from_url
+from graph.blast_radius import _blast_radius_core
 
 
 def suggest_reviewers(
@@ -49,13 +48,11 @@ def suggest_reviewers(
 
     No model call — fully deterministic.
     """
-    from backend.graph.store import load_graph
-    from backend.clients.github_client import GitHubClient
-    from backend.config import settings
+    from graph.store import load_graph
+    from clients.github_client import GitHubClient
+    from config import settings
 
-    # Derive repo_id
-    slug = repo_url.rstrip("/").split("github.com/")[-1].removesuffix(".git")
-    repo_id = slug.replace("/", "__")
+    repo_id = repo_id_from_url(repo_url)
 
     try:
         graph = load_graph(repo_id)
@@ -73,7 +70,7 @@ def suggest_reviewers(
         return {"reviewers": [], "blast_radius_size": 0, "error": None}
 
     # Get commit authors for affected files via GitHub API
-    gh = GitHubClient(settings.github_token)
+    gh = GitHubClient(settings.GITHUB_TOKEN)
     try:
         repo = gh.get_repo(repo_url)
     except Exception as e:

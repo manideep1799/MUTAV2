@@ -50,3 +50,13 @@ def query(repo_url: str, query_embedding: list[float], top_k: int = None, paths:
 def collection_is_empty(repo_url: str) -> bool:
     collection = get_or_create_collection(repo_url)
     return collection.count() == 0
+
+
+def delete_collection(repo_url: str) -> bool:
+    """Purge a repo's indexed chunks. Nothing currently calls this
+    automatically — see B2B_AUDIT.md item 2 (vector store lifecycle)."""
+    try:
+        _client.delete_collection(name=_collection_name(repo_url))
+        return True
+    except Exception:
+        return False
