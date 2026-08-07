@@ -232,3 +232,39 @@ real "Run /index first" message from `graph/store.py`), the governance
 report's shape, and the `DELETE /index` purge actually removing a graph
 file from disk. Not exercised against real Groq/GitHub APIs — do that
 before treating this as demo-ready.
+
+---
+
+## 7. "Helix engine" turned out to be plain Ollama — fixed a real bug in that path
+
+Follow-up on part 6's Helix question. Had the requester curl the ngrok URL
+from a machine that could actually reach it (this sandbox still can't):
+`GET /` returned `Ollama is running` — Ollama's literal default root
+response — and `/openapi.json`/`/health` both 404'd, which rules out a
+custom API server. It's the existing `OLLAMA_BASE_URL` path in
+`rag_qa.py`, reached over a tunnel, running `llama3.1:8b`.
+
+That surfaced a real bug rather than just a config question: the OpenAI
+SDK client `rag_qa._get_client()` builds for the Ollama path doesn't send
+any custom headers, but ngrok's free-tier interstitial intercepts
+unheadered requests with an HTML "visit site" warning page instead of
+proxying through — exactly what curl hit before the
+`ngrok-skip-browser-warning` header was added to the request. Every real
+chat completion through that path would have silently gotten HTML back
+where JSON was expected. Fixed by passing
+`default_headers={"ngrok-skip-browser-warning": "true"}` to the `OpenAI()`
+client constructor when `OLLAMA_BASE_URL` is set — verified by
+constructing the real client (openai==1.51.0, the pinned version) against
+the actual ngrok URL and confirming the header lands on the client.
+
+Also documented `OLLAMA_BASE_URL`/`OLLAMA_MODEL` in `.env.example` — both
+were live `config.py` settings with zero mention in the example file
+before this.
+
+To actually use it: set in your local `.env` (not committed) —
+```
+OLLAMA_BASE_URL=https://spearmint-factoid-brewery.ngrok-free.dev/v1
+OLLAMA_MODEL=llama3.1:8b
+```
+Note the `/v1` suffix — Ollama's OpenAI-compatible routes live there, and
+the OpenAI SDK appends `/chat/completions` etc. to whatever `base_url` is.

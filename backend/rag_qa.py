@@ -19,10 +19,15 @@ def _get_client():
     global _client
     if _client is None:
         if settings.OLLAMA_BASE_URL:
-            # Connect to remote Ollama (Qwen) via ngrok using OpenAI compatible endpoint
+            # Connect to remote Ollama via ngrok using the OpenAI-compatible endpoint.
+            # ngrok's free-tier tunnels intercept unheadered requests with an HTML
+            # "visit site" warning page instead of proxying through to Ollama — the
+            # OpenAI SDK won't send this header on its own, so every chat completion
+            # would otherwise get an HTML page back instead of a JSON response.
             _client = OpenAI(
                 api_key="ollama", # Ollama doesn't require a real key
-                base_url=settings.OLLAMA_BASE_URL
+                base_url=settings.OLLAMA_BASE_URL,
+                default_headers={"ngrok-skip-browser-warning": "true"},
             )
         else:
             # Fallback to Groq
