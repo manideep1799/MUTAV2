@@ -3,13 +3,15 @@
 Per the plan: "None of these are hard to satisfy given the architecture,
 but they need to be demonstrated with an actual audit, not asserted from
 the pitch deck." This is that audit — every claim below is traced to a
-specific file and line, not asserted. One finding directly contradicts the
-plan document itself (item 4).
+specific file and line, not asserted. One finding directly contradicted the
+plan document itself (item 4) and has since been fixed.
 
-Status: **not yet sellable to a security-conscious buyer.** Three of four
-items have real, code-verified gaps. One fix shipped in this pass (item 2's
-purge mechanism); the rest need infrastructure this pass explicitly didn't
-build (real auth, a secrets manager, log redaction policy).
+Status: **not yet fully sellable to a security-conscious buyer, but closer.**
+Two of four items have real fixes shipped (item 2's purge mechanism, item
+4's local embeddings). The remaining two (trace logging, token handling)
+need infrastructure this pass explicitly didn't build (a secrets manager,
+a log redaction/retention policy) — those aren't code changes, they're
+product decisions.
 
 ---
 
@@ -86,36 +88,39 @@ manager (Vault, AWS Secrets Manager, or at minimum encryption-at-rest with
 a KMS-managed key), which is infrastructure, not a code change, and stays
 out of scope for the "demo scope, no auth" posture this pass was scoped to.
 
-## 4. Network boundary — contradicts the plan's own self-hosted claim
+## 4. Network boundary — was a direct contradiction of the plan's own self-hosted claim; fixed in a follow-up pass
 
-Every outbound call in the codebase, traced to its file:
+**Original finding:** §4's "Self-hosted" row claims *"Embeddings (local
+BGE) ... all run on customer infrastructure; only the generation call
+leaves the environment."* That was not what the code did — `embeddings.py`
+called Gemini's hosted embeddings REST API for every chunk, despite
+`sentence-transformers`/`huggingface-hub` already being dependencies
+(used only for the reranker at the time). Exactly the kind of gap §6
+warns about: a claim in the pitch document the running code didn't back up.
+
+**Fixed:** `embeddings.py` now calls a local `sentence-transformers` model
+(`BAAI/bge-base-en-v1.5`, `config.EMBEDDING_MODEL`) instead of Gemini's
+REST API. `GEMINI_API_KEY` and the `google-genai` dependency (itself
+unused — the old code called Gemini's REST API directly, never through
+that SDK) are both removed. The plan's §4 claim now matches the code.
+
+Every outbound call in the codebase, traced to its file, as of this fix:
 
 | Destination | From | When |
 |---|---|---|
 | `api.github.com` | `clients/github_client.py`, `backend/github_client.py` | every repo/issue/commit lookup |
-| `api.groq.com` | `clients/llm_client.py` (gate, issue_rec, pr_check, issue_health) | every one of those calls |
-| `generativelanguage.googleapis.com` (Gemini) | `embeddings.py` | every indexed chunk, every HyDE passage |
+| `api.groq.com` | `clients/llm_client.py` (gate, issue_rec, pr_check, issue_health), and `rag_qa.py` unless `OLLAMA_BASE_URL` is set | every one of those calls |
 | Ollama via ngrok (`OLLAMA_BASE_URL`, optional) | `rag_qa.py` only | only if configured, replaces Groq for that file only |
-| `huggingface.co` | `reranker.py`'s `CrossEncoder("BAAI/bge-reranker-base")` | **first use only**, then fully local |
-| `openaipublic.blob.core.windows.net` | `tiktoken.get_encoding("cl100k_base")` in `embeddings.py` | **first use only**, then fully local (hit this exact wall while testing this pass — see below) |
+| `huggingface.co` | `reranker.py`'s `CrossEncoder("BAAI/bge-reranker-base")` and `embeddings.py`'s `SentenceTransformer("BAAI/bge-base-en-v1.5")` | **first use only per model**, then fully local |
+| `openaipublic.blob.core.windows.net` | `tiktoken.get_encoding("cl100k_base")` in `embeddings.py` | **first use only**, then fully local (hit this exact wall while testing this repo's setup) |
 
-**Direct contradiction with the plan document:** §4's "Self-hosted" row
-claims *"Embeddings (local BGE) ... all run on customer infrastructure;
-only the generation call leaves the environment."* That is not what the
-code does. `embeddings.py` calls Gemini's hosted embeddings REST API for
-every chunk — there is no local BGE embedding path in this codebase today,
-despite `sentence-transformers` and `huggingface-hub` already being
-dependencies (currently used only for the reranker). This is exactly the
-kind of gap §6 warns about: a claim in the pitch document that the running
-code does not back up. Swapping in a local `BAAI/bge-base-en-v1.5`
-embedding model is plausible future work — the dependencies are already
-there — but it's a real feature build, not a config flag, and out of scope
-for this pass.
-
-**Also worth stating precisely for a self-hosted claim:** the reranker and
-tokenizer both make one outbound call on first use to fetch weights/data,
-then run fully offline. A genuinely air-gapped deployment needs those
-pre-cached into the image ahead of time, not just "self-hosted" asserted.
+**Still worth stating precisely for a self-hosted claim:** the reranker,
+the embedding model, and the tokenizer each make one outbound call on
+first use to fetch weights/data, then run fully offline. A genuinely
+air-gapped deployment needs all three pre-cached into the image ahead of
+time, not just "self-hosted" asserted. Embeddings moving local also means
+`/index` no longer costs external API quota — only the LLM generation
+calls (Groq or Ollama) do.
 
 ---
 
@@ -126,11 +131,11 @@ pre-cached into the image ahead of time, not just "self-hosted" asserted.
 | 1. Trace logging | Documented, not fixed — needs a redaction/retention policy decision |
 | 2. Vector store / graph lifecycle | **Purge mechanism shipped this pass**; auto-trigger still needs real auth |
 | 3. Token handling | Documented — real fix needs a secrets manager, not a code change |
-| 4. Network boundary | Documented — found a real contradiction between the plan's §4 claim and the shipped embeddings code |
+| 4. Network boundary | **Fixed in a follow-up pass** — embeddings moved to local BGE, matching the plan's §4 claim; `GEMINI_API_KEY` no longer needed |
 
-None of this blocks the demo. All of it blocks presenting §4's
-"self-hosted" row or the governance dashboard (`/b2b/governance-report`)
-as compliance-ready without the caveats above — which is why both surfaces
-now report `dataset_version`/`rubric_version` as `null` and include a
-`generation_model_note` that reflects what's actually configured, rather
-than asserting the one-model constraint unconditionally.
+None of this blocks the demo. Items 1 and 3 (trace logging, token
+handling) still block presenting the governance dashboard
+(`/b2b/governance-report`) as compliance-ready without the caveats above —
+which is why it reports `dataset_version`/`rubric_version` as `null` and
+includes a `generation_model_note` that reflects what's actually
+configured, rather than asserting the one-model constraint unconditionally.

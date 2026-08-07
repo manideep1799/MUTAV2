@@ -268,3 +268,43 @@ OLLAMA_MODEL=llama3.1:8b
 ```
 Note the `/v1` suffix — Ollama's OpenAI-compatible routes live there, and
 the OpenAI SDK appends `/chat/completions` etc. to whatever `base_url` is.
+
+---
+
+## 8. Embeddings moved from Gemini to local BGE — fixes B2B_AUDIT.md item 4, drops a required key
+
+While walking through local setup, `embeddings.py` turned out to be
+asking for a `GEMINI_API_KEY` that the app's own `B2B_AUDIT.md` (item 4,
+written a few commits earlier in this same session) had already flagged
+as a contradiction: the B2B plan's §4 "self-hosted" deployment claim
+explicitly says embeddings should be local BGE, not a hosted API.
+
+- `embeddings.py` — `embed_texts()` no longer calls Gemini's REST API.
+  It now lazy-loads a local `sentence-transformers` model
+  (`SentenceTransformer(settings.EMBEDDING_MODEL)`, default
+  `BAAI/bge-base-en-v1.5`) and encodes locally with
+  `normalize_embeddings=True`, the same lazy-singleton pattern
+  `reranker.py` already used for its cross-encoder. No more manual
+  429-retry loop either — there's no remote quota to hit.
+- `config.py` — `EMBEDDING_MODEL` default changed to
+  `BAAI/bge-base-en-v1.5`; the `GEMINI_API_KEY` setting is removed
+  entirely (confirmed by grep it was read nowhere else).
+- `.env.example`, `README.md` — updated to match: only `GROQ_API_KEY`
+  and `GITHUB_TOKEN` are needed now, embeddings need no key at all.
+- `requirements.txt` — dropped `google-genai`, which turned out to be
+  dead weight even before this change (the old Gemini code called the
+  REST API directly with `requests`, never through that SDK — grepped
+  to confirm zero imports of it anywhere).
+- `B2B_AUDIT.md` — item 4 updated from "contradiction found" to "fixed,"
+  with the network-boundary table and the doc's own status line updated
+  to match reality rather than left stale the moment it was fixed.
+
+Verified end-to-end with the real `sentence-transformers` types stubbed
+out (no GPU/network in this sandbox for an actual model download):
+`embed_texts([])` still short-circuits to `[]`, a batch of real texts
+returns one normalized vector per input with no key set anywhere, the
+model loads lazily and is reused across calls, and `main.py` imports
+cleanly with `GEMINI_API_KEY` absent from `settings` altogether. Indexing
+a real repo will now download `BAAI/bge-base-en-v1.5` on first use (a few
+hundred MB, one-time, then fully offline) instead of calling out to
+Gemini per chunk.

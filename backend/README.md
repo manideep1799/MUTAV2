@@ -64,10 +64,11 @@ cp .env.example .env
 Now open `.env` in any text editor and fill in:
 
 - **GROQ_API_KEY** — required. Get one free at https://console.groq.com/keys
-- **GEMINI_API_KEY** — required (used for embeddings). Get one free at https://aistudio.google.com/apikey
 - **GITHUB_TOKEN** — optional but recommended. Get one at https://github.com/settings/tokens
   → "Generate new token (classic)" → check the `repo` box → generate.
   Without this, you can still use public repos but you'll hit GitHub's rate limit quickly.
+
+Embeddings run locally (no key needed) — the model downloads once on first use.
 
 Leave the other variables as-is unless you know you want to change them.
 
@@ -97,11 +98,11 @@ The order to try things in:
 
 ## Common problems
 
-- **Auth/API errors from Groq or Gemini** — you forgot step 4, or forgot to save `.env`
+- **Auth/API errors from Groq** — you forgot step 4, or forgot to save `.env`
 - **GitHub rate limit errors** — add a `GITHUB_TOKEN` (step 4)
-- **Indexing takes a while / costs API credit** — this is normal; each file
-  gets split into chunks and each chunk calls the embeddings API. Start with
-  a small repo (under ~50 files) for your first test.
+- **First `/index` call is slow** — the local embedding model downloads on
+  first use (a few hundred MB); after that it's cached and runs offline.
+  Start with a small repo (under ~50 files) for your first test.
 - **`ModuleNotFoundError`** — make sure your virtual environment is activated
   (you should see `(.venv)` in your prompt) and that you ran `pip install -r requirements.txt`
 

@@ -22,7 +22,6 @@ REPORTS_DIR = REPO_ROOT / "backend" / "mutagent" / "reports"
 
 class Settings:
     GROQ_API_KEY: str   = os.getenv("GROQ_API_KEY", "")
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GITHUB_TOKEN: str   = os.getenv("GITHUB_TOKEN", "")
 
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "")
@@ -30,7 +29,8 @@ class Settings:
 
     CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma")
 
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
+    # Local sentence-transformers model — no API key, no quota, no rate limit.
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
     LLM_MODEL: str       = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 
     TOP_K: int        = int(os.getenv("TOP_K", "25"))

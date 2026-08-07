@@ -1,13 +1,24 @@
 """
 Two jobs:
 1. chunk_text() — splits long text into overlapping token-sized pieces
-2. embed_texts() — calls Gemini to turn a list of text chunks into vectors
+2. embed_texts() — turns a list of text chunks into vectors using a local
+   BGE model (sentence-transformers) — no API key, no quota, no rate limit
 """
 import tiktoken
-import requests
 from config import settings
 
 _encoding = tiktoken.get_encoding("cl100k_base")
+
+_model = None
+
+
+def _get_model():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        print(f"Loading local embedding model {settings.EMBEDDING_MODEL} (this may take a moment on first boot)...")
+        _model = SentenceTransformer(settings.EMBEDDING_MODEL)
+    return _model
 
 
 def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> list[str]:
@@ -21,7 +32,7 @@ def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> list[s
     text = text.strip()
     if not text:
         return []
-        
+
     tokens = _encoding.encode(text)
     if len(tokens) <= chunk_size:
         return [text]
@@ -39,33 +50,12 @@ def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> list[s
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
     """
-    Batches texts to Gemini's embeddings REST API endpoint. Returns one vector per input text,
-    in the same order.
+    Embeds a list of texts locally via a BGE sentence-transformers model.
+    Returns one vector per input text, in the same order.
     """
     if not texts:
         return []
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.EMBEDDING_MODEL}:batchEmbedContents?key={settings.GEMINI_API_KEY}"
-    data = {
-        "requests": [
-            {
-                "model": f"models/{settings.EMBEDDING_MODEL}",
-                "content": {"parts": [{"text": text}]}
-            }
-            for text in texts
-        ]
-    }
-    import time
-    for attempt in range(5):
-        response = requests.post(url, json=data)
-        if response.status_code == 429:
-            print(f"Gemini API rate limit hit. Waiting 15 seconds before retrying (Attempt {attempt + 1}/5)...")
-            time.sleep(15)
-            continue
-            
-        response.raise_for_status()
-        result = response.json()
-        return [item["values"] for item in result.get("embeddings", [])]
-        
-    response.raise_for_status()
-    return []
+    model = _get_model()
+    vectors = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
+    return vectors.tolist()
