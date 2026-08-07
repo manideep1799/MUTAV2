@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from config import settings
 from indexing import index_repo
 from rag_qa import ask_question
+from pipeline.gate import run_gate
 from issue_recommendation import recommend_issue
 from learning_roadmap import generate_roadmap
 from pr_readiness import check_pr_readiness
@@ -106,11 +107,27 @@ def index_endpoint(req: IndexRequest):
 
 @app.post("/ask")
 def ask_endpoint(req: AskRequest):
-    """Hybrid RAG Q&A — repo must already be indexed."""
+    """Council-gated hybrid RAG Q&A — repo must already be indexed.
+
+    The council gate (Mutagent target #2/#4) classifies the question first.
+    A question that fails clarity/scope/answerability/specificity is
+    rejected with a reason before retrieval ever runs.
+    """
+    gate = run_gate(req.question)
+    if not gate["passed"]:
+        return {
+            "passed": False,
+            "reason": gate["reason"],
+            "classification": {field: gate[field] for field in
+                                ("clarity", "scope", "answerability", "specificity")},
+        }
+
     try:
-        return ask_question(req.repo_url, req.question)
+        result = ask_question(req.repo_url, req.question, route=gate["route"])
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    return {"passed": True, "route": gate["route"], "sub_queries": gate["sub_queries"], **result}
 
 
 @app.post("/recommend-issue")

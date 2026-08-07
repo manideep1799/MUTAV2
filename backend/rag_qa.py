@@ -53,11 +53,15 @@ def _generate_hypothetical_document(question: str) -> str:
     return (response.choices[0].message.content or "").strip()
 
 
-def ask_question(repo_url: str, question: str) -> dict:
+def ask_question(repo_url: str, question: str, route: str = "hybrid") -> dict:
     repo_url = parse_repo_url(repo_url)
     """
     Returns: {"answer": "...", "sources": ["src/app.py", "README.md"]}
     Raises a ValueError if the repo hasn't been indexed yet.
+
+    `route` is the council gate's routing decision ("vector" | "graph" |
+    "hybrid"); it decides whether graph-aware retrieval runs at all. Callers
+    that don't run the gate (e.g. tests) get the previous full-hybrid behavior.
     """
     if collection_is_empty(repo_url):
         raise ValueError(f"Repo '{repo_url}' has not been indexed yet. Call /index first.")
@@ -78,7 +82,7 @@ def ask_question(repo_url: str, question: str) -> dict:
     # Use Hybrid Retrieval (Vector + Graph Symbols). `question` (not the HyDE
     # passage) still drives symbol extraction and reranking below.
     documents, metadatas = hybrid_retrieve(
-        repo_url, question, question_embedding, top_k=settings.TOP_K
+        repo_url, question, question_embedding, top_k=settings.TOP_K, route=route
     )
 
     documents, metadatas = rerank_documents(question, documents, metadatas, top_n=settings.RERANK_TOP_K)

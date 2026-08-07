@@ -56,36 +56,45 @@ def _rrf_fuse(dense: list[dict[str, Any]], sparse: list[dict[str, Any]], k: int 
     sorted_keys = sorted(scores.keys(), key=lambda k: scores[k], reverse=True)
     return [chunk_map[key] for key in sorted_keys]
 
-def hybrid_retrieve(repo_url: str, question: str, question_embedding: list[float], top_k: int = 20) -> tuple[list[str], list[dict[str, Any]]]:
+def hybrid_retrieve(repo_url: str, question: str, question_embedding: list[float], top_k: int = 20, route: str = "hybrid") -> tuple[list[str], list[dict[str, Any]]]:
     """
     Returns (documents, metadatas) using Hybrid Search (Dense + Graph-aware Sparse).
+
+    `route` comes from the council gate (Target #2/#4): "vector" skips the
+    graph-aware sparse search and structural-facts injection entirely, since
+    the gate already decided this question doesn't need graph structure.
+    "graph" and "hybrid" both run the full pipeline below — "graph" without a
+    dedicated graph-only path isn't a documented gate outcome, so treat it
+    the same as "hybrid" rather than under-serving it.
     """
     repo_url = parse_repo_url(repo_url)
     slug = repo_url.rstrip("/").split("github.com/")[-1].removesuffix(".git")
     repo_id = slug.replace("/", "__")
-    
+    use_graph = route != "vector"
+
     # 1. Dense vector search
     dense_results_raw = vector_query(repo_url, question_embedding, top_k=top_k)
     dense_chunks = []
     if dense_results_raw["documents"] and dense_results_raw["documents"][0]:
         for doc, meta in zip(dense_results_raw["documents"][0], dense_results_raw["metadatas"][0]):
             dense_chunks.append({"text": doc, **meta})
-            
-    # 2. Sparse Identifier-Index search
-    symbols = _extract_identifiers(question)
-    graph_paths = _get_graph_paths_for_symbols(repo_id, symbols) if symbols else []
-    
+
+    # 2. Sparse Identifier-Index search (skipped when the gate routed pure "vector")
     sparse_chunks = []
-    if graph_paths:
-        sparse_results_raw = vector_query(repo_url, question_embedding, top_k=top_k, paths=graph_paths)
-        if sparse_results_raw["documents"] and sparse_results_raw["documents"][0]:
-            for doc, meta in zip(sparse_results_raw["documents"][0], sparse_results_raw["metadatas"][0]):
-                sparse_chunks.append({"text": doc, **meta})
-                
+    if use_graph:
+        symbols = _extract_identifiers(question)
+        graph_paths = _get_graph_paths_for_symbols(repo_id, symbols) if symbols else []
+
+        if graph_paths:
+            sparse_results_raw = vector_query(repo_url, question_embedding, top_k=top_k, paths=graph_paths)
+            if sparse_results_raw["documents"] and sparse_results_raw["documents"][0]:
+                for doc, meta in zip(sparse_results_raw["documents"][0], sparse_results_raw["metadatas"][0]):
+                    sparse_chunks.append({"text": doc, **meta})
+
     # 3. Graph structural facts injection
     # If the user asks about blast radius or architecture, inject deterministic graph answers
     graph_facts_chunk = None
-    if "break" in question.lower() or "impact" in question.lower() or "rely" in question.lower():
+    if use_graph and ("break" in question.lower() or "impact" in question.lower() or "rely" in question.lower()):
         try:
             graph = load_graph(repo_id)
             target_paths = [p for p in graph.nodes if p in question]
