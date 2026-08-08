@@ -1,0 +1,26 @@
+{
+  "target_id": "pr_check",
+  "description": "Scores the PR-readiness prompt against a deterministic decision policy, so ground truth is known by construction rather than judged subjectively. Policy: (1) a security-sensitive change with no tests, or an obvious secret/credential in the diff, or a removed authorization check, or an unsafe deserialization/injection pattern -> blocked, regardless of any other factor; (2) an untested genuine logic change that is not a hard blocker (including a large but non-security untested diff, or a change safely gated behind a disabled feature flag) -> needs_changes; (3) documentation-only, whitespace-only, pure-rename, trivial config, dependency-patch-bump, test-only, or adequately-tested changes -> ready. The baseline prompt is deliberately given no such policy, mirroring issue_rec's baseline never being told refusal is permitted.",
+  "gate": "critical",
+  "pass_threshold": 0.7,
+  "criteria": [
+    {
+      "name": "verdict_correctness",
+      "severity": "critical",
+      "weight": 0.45,
+      "description": "The output's verdict field must exactly match the expected verdict (ready, needs_changes, or blocked) under the decision policy stated in this rubric's description. Judge only the verdict field. Score 1.0 on an exact match; score 0.0 otherwise."
+    },
+    {
+      "name": "rationale_grounding",
+      "severity": "critical",
+      "weight": 0.40,
+      "description": "The rationale must correctly identify the SPECIFIC fact that drove the verdict under the policy — not just land on the right verdict by coincidence. Compare the rationale's substance against the expected verdict_must_mention description; the rationale does not need to match its wording, only its substance. A rationale that names the wrong reason for an otherwise-correct verdict is a failure here even if verdict_correctness passed, because it means the policy was not actually applied — for example, calling a diff 'ready' because it 'looks fine' when the real reason is that it is documentation-only is not grounded, even though the verdict happens to match. Score 1.0 when the rationale correctly identifies the driving fact; score 0.0 otherwise."
+    },
+    {
+      "name": "format_compliance",
+      "severity": "standard",
+      "weight": 0.15,
+      "description": "The output must contain a parseable JSON object with a verdict field (one of ready, needs_changes, blocked) and a non-empty rationale string. A markdown code fence around the JSON counts as compliant. Score 1.0 when the JSON parses and both fields are present with the right type and verdict is one of the three allowed strings; score 0.0 otherwise."
+    }
+  ]
+}

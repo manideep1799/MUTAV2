@@ -6,6 +6,10 @@ from graph.store import load_graph
 from graph.query_dsl import execute_query
 from github_client import parse_repo_url
 
+from config import load_prompt
+from clients.llm_client import json_complete
+from observability.tracer import trace
+
 IDENT_RE = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 
 def _extract_identifiers(text: str) -> list[str]:
@@ -92,22 +96,24 @@ def hybrid_retrieve(repo_url: str, question: str, question_embedding: list[float
                     sparse_chunks.append({"text": doc, **meta})
 
     # 3. Graph structural facts injection
-    # If the user asks about blast radius or architecture, inject deterministic graph answers
+    # Execute an AI-generated structural AST query if the Gate permitted graph traversal
     graph_facts_chunk = None
-    if use_graph and ("break" in question.lower() or "impact" in question.lower() or "rely" in question.lower()):
+    if use_graph:
         try:
             graph = load_graph(repo_id)
-            target_paths = [p for p in graph.nodes if p in question]
-            if not target_paths and symbols:
-                target_paths = _get_graph_paths_for_symbols(repo_id, symbols)
-            
-            if target_paths:
-                result = execute_query({"op": "blast_radius", "targets": target_paths[:5], "max_hops": 3}, graph)
-                nodes = result.get("nodes", [])
-                if nodes:
-                    lines = [f"- {n['path']} ({n['hops']} hop{'s' if n['hops'] != 1 else ''}, {n['reason']})" for n in nodes[:20]]
-                    fact_text = f"Blast radius of {', '.join(target_paths[:5])}:\n" + "\n".join(lines)
-                    graph_facts_chunk = {"text": fact_text, "path": target_paths[0], "start_line": -1, "end_line": -1}
+            prompt = load_prompt("graph_query").format(question=question)
+            parsed_json, raw_text, latency_ms = json_complete(prompt, temperature=0.1, max_tokens=1024)
+
+            trace(component="graph_query", prompt=prompt, raw_output=raw_text, latency_ms=latency_ms, extra={"question": question})
+
+            result = execute_query(parsed_json, graph)
+            nodes = result.get("nodes", [])
+            if nodes:
+                op = parsed_json.get("op", "unknown")
+                target = parsed_json.get("targets", [""])[0] if "targets" in parsed_json else parsed_json.get("symbol", "")
+                lines = [f"- {n['path']} ({n.get('hops', 1)} hop(s), {n.get('reason', '')})" for n in nodes[:20]]
+                fact_text = f"Graph results for {op} on {target}:\n" + "\n".join(lines)
+                graph_facts_chunk = {"text": fact_text, "path": nodes[0]['path'], "start_line": -1, "end_line": -1}
         except Exception:
             pass
             

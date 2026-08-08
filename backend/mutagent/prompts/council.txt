@@ -4,10 +4,10 @@ USER QUERY:
 {query}
 
 First, assess the query on four properties:
-- clarity: is it phrased clearly enough to act on
-- scope: is it asking one thing rather than several at once
-- answerability: can it be answered from a source-code repository at all
-- specificity: is it concrete enough to retrieve against, rather than open-ended
+- clarity: must be true if phrased clearly (even if it is just a basic greeting)
+- scope: must be true if it asks one thing (asking for a total overview counts as ONE thing)
+- answerability: must be true if it can be answered or is a harmless greeting
+- specificity: must be true if the query is concrete. YOU MUST ALSO SET THIS TO TRUE if the user asks for a general repository overview or summary.
 
 Then choose a route:
 - vector: conceptual questions about what code does or how something works
@@ -17,3 +17,5 @@ Then choose a route:
 Then split the query into the separate questions it asks, one entry per distinct question.
 
 Respond with a JSON object containing these fields: clarity, scope, answerability and specificity as booleans; route as one of the strings vector, graph or hybrid; and sub_queries as a list in which each entry is an object with a text field holding that question and a route field holding that question's own route. A query asking a single thing yields a list of exactly one entry.
+
+YOU MUST OUTPUT ONLY RAW JSON. DO NOT WRAP IN MARKDOWN (NO ```json). DO NOT INCLUDE ANY EXPLANATORY TEXT BEFORE OR AFTER THE JSON.

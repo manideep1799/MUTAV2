@@ -1,0 +1,266 @@
+[
+  {
+    "name": "out_of_bounds_language",
+    "failure_mode": "Recommends an issue in a language the developer does not know.",
+    "inputs": {
+      "user_profile": "5 years of Java and Spring Boot. No other languages.",
+      "repo_context": "Issue #501: 'Fix goroutine leak in worker pool' [bug, go]\nIssue #502: 'Migrate Rails controllers to API-only' [refactor, ruby]"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "no matching issues in the developer's languages"
+    }
+  },
+  {
+    "name": "clean_match_positive",
+    "failure_mode": "Fails to recommend a genuinely good match (over-caution / always-null).",
+    "inputs": {
+      "user_profile": "3 years of Python, mostly Flask web services and REST APIs.",
+      "repo_context": "Issue #310: 'Session cookie expires too early on Flask login' [bug, python]\nIssue #311: 'Add gRPC health-check endpoint' [feature, go]\nIssue #312: 'Port build scripts to Cargo' [chore, rust]"
+    },
+    "expected": {
+      "issue_id": 310,
+      "rationale_must_mention": "Python and Flask"
+    }
+  },
+  {
+    "name": "difficulty_out_of_depth",
+    "failure_mode": "Matches on language but ignores that the work is far beyond the developer's level.",
+    "inputs": {
+      "user_profile": "Beginner. Learning Python basics; this would be my first open-source contribution.",
+      "repo_context": "Issue #77: 'Rewrite the async event loop for zero-copy IO' [core, python, advanced]\nIssue #78: 'Redesign the plugin ABI and migration shims' [core, python, advanced]"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "beyond a beginner's level"
+    }
+  },
+  {
+    "name": "hallucination_trap",
+    "failure_mode": "Invents an issue number that is not present in the repository context.",
+    "inputs": {
+      "user_profile": "Rust systems programmer focused on networking and TLS.",
+      "repo_context": "Issue #88: 'Add a SIMD path to the checksum routine' [perf, rust]\nIssue #90: 'Update the Rust API reference docs' [docs, rust]"
+    },
+    "expected": {
+      "issue_id": 88,
+      "rationale_must_mention": "an issue that actually exists in the list"
+    }
+  },
+  {
+    "name": "label_bait",
+    "failure_mode": "Chooses a trivial 'good first issue' label over the developer's real skill match.",
+    "inputs": {
+      "user_profile": "Frontend engineer, 4 years of TypeScript and React, strong on server-side rendering.",
+      "repo_context": "Issue #150: 'Fix hydration mismatch in server-side rendered pages' [bug, typescript, react]\nIssue #151: 'Fix a typo in the README' [docs, good first issue]"
+    },
+    "expected": {
+      "issue_id": 150,
+      "rationale_must_mention": "TypeScript and React"
+    }
+  },
+  {
+    "name": "empty_issue_list",
+    "failure_mode": "Fabricates a recommendation when the repository has no open issues at all.",
+    "inputs": {
+      "user_profile": "Backend engineer, 6 years of Python and PostgreSQL.",
+      "repo_context": "(no open issues)"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "there are no open issues to recommend"
+    }
+  },
+  {
+    "name": "single_issue_wrong_language",
+    "failure_mode": "Recommends the only available issue because it is the only option, ignoring fit.",
+    "inputs": {
+      "user_profile": "Data scientist. Python and pandas only; no compiled languages.",
+      "repo_context": "Issue #205: 'Fix segfault in the C extension allocator' [bug, c]"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "the only open issue requires C"
+    }
+  },
+  {
+    "name": "all_advanced_for_bootcamp_grad",
+    "failure_mode": "Sends a brand-new contributor into deep internals because the language matches.",
+    "inputs": {
+      "user_profile": "Just finished a 12-week JavaScript bootcamp. Comfortable with basic React components; no production experience.",
+      "repo_context": "Issue #410: 'Rewrite the reconciler fiber scheduling algorithm' [core, javascript, advanced]\nIssue #411: 'Implement incremental hydration for streaming SSR' [core, javascript, advanced]\nIssue #412: 'Design a new concurrent rendering API' [architecture, javascript, advanced]"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "all open issues are deep internals work"
+    }
+  },
+  {
+    "name": "domain_mismatch_embedded",
+    "failure_mode": "Treats surface language overlap as domain fit.",
+    "inputs": {
+      "user_profile": "Frontend developer. CSS, HTML, and some JavaScript for UI work.",
+      "repo_context": "Issue #620: 'SPI driver drops bytes at 40MHz on the STM32 target' [bug, c, embedded]\nIssue #621: 'Reduce interrupt latency in the RTOS scheduler' [perf, c, embedded]"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "embedded systems work outside the developer's domain"
+    }
+  },
+  {
+    "name": "expert_no_matching_domain",
+    "failure_mode": "Assumes a senior developer can take anything, regardless of domain.",
+    "inputs": {
+      "user_profile": "Machine learning engineer, 8 years. PyTorch, model training, distributed GPU workloads.",
+      "repo_context": "Issue #730: 'Button focus ring is invisible in dark mode' [bug, css]\nIssue #731: 'Align the marketing page footer on mobile' [bug, css]"
+    },
+    "expected": {
+      "issue_id": null,
+      "rationale_must_mention": "only CSS styling issues, unrelated to machine learning"
+    }
+  },
+  {
+    "name": "python_beginner_doc_issue",
+    "failure_mode": "Overlooks the beginner-appropriate issue and picks an advanced one in the same language.",
+    "inputs": {
+      "user_profile": "Recently completed a Python course. Comfortable with basic syntax and functions. First contribution.",
+      "repo_context": "Issue #101: 'Add missing docstrings to the utils module' [documentation, python, good first issue]\nIssue #102: 'Optimize the tokenizer hot loop with SIMD' [performance, rust]\nIssue #103: 'Redesign the plugin loading architecture' [core-architecture, python]"
+    },
+    "expected": {
+      "issue_id": 101,
+      "rationale_must_mention": "beginner-friendly Python documentation work"
+    }
+  },
+  {
+    "name": "frontend_specialist_mixed_stack",
+    "failure_mode": "Picks a backend issue from a mixed-stack repository for a frontend specialist.",
+    "inputs": {
+      "user_profile": "Senior React developer, 5 years. Tailwind, component architecture, accessibility.",
+      "repo_context": "Issue #220: 'Dropdown menu is not keyboard navigable' [bug, react, accessibility]\nIssue #221: 'Connection pool exhausted under load' [bug, python, fastapi]\nIssue #222: 'Add caching to the CI build step' [chore, ci]"
+    },
+    "expected": {
+      "issue_id": 220,
+      "rationale_must_mention": "React and accessibility"
+    }
+  },
+  {
+    "name": "performance_engineer_takes_the_hard_one",
+    "failure_mode": "Defaults to the easy issue for a specialist whose skills fit the hard one exactly.",
+    "inputs": {
+      "user_profile": "Low-level systems engineer. C++, memory profiling, valgrind, cache optimization.",
+      "repo_context": "Issue #330: 'Memory leak in the buffer pool under sustained load' [bug, cpp, memory]\nIssue #331: 'Fix a typo in CONTRIBUTING.md' [docs, good first issue]"
+    },
+    "expected": {
+      "issue_id": 330,
+      "rationale_must_mention": "C++ memory profiling"
+    }
+  },
+  {
+    "name": "go_concurrency_match",
+    "failure_mode": "Fails to match a concurrency specialist to the concurrency bug.",
+    "inputs": {
+      "user_profile": "Go developer, 4 years. Concurrency, channels, and the race detector.",
+      "repo_context": "Issue #440: 'Data race in the connection cache under concurrent access' [bug, go, concurrency]\nIssue #441: 'Update the Helm chart to the new API version' [chore, yaml]\nIssue #442: 'Improve error messages in the CLI' [enhancement, go]"
+    },
+    "expected": {
+      "issue_id": 440,
+      "rationale_must_mention": "Go concurrency"
+    }
+  },
+  {
+    "name": "java_spring_match",
+    "failure_mode": "Ignores framework specificity within a matching language.",
+    "inputs": {
+      "user_profile": "Java backend engineer, 6 years of Spring Boot and JPA.",
+      "repo_context": "Issue #550: 'N+1 query when loading orders with line items' [bug, java, spring, jpa]\nIssue #551: 'Android layout breaks on tablets' [bug, java, android]\nIssue #552: 'Bump the Gradle wrapper' [chore]"
+    },
+    "expected": {
+      "issue_id": 550,
+      "rationale_must_mention": "Spring and JPA"
+    }
+  },
+  {
+    "name": "typescript_types_match",
+    "failure_mode": "Confuses TypeScript type-system work with general JavaScript work.",
+    "inputs": {
+      "user_profile": "TypeScript developer. Strong on generics, conditional types, and declaration files.",
+      "repo_context": "Issue #660: 'Generic inference fails on nested conditional types' [bug, typescript, types]\nIssue #661: 'Add a dark mode toggle to the docs site' [feature, css]\nIssue #662: 'Flaky test in the e2e suite' [bug, ci]"
+    },
+    "expected": {
+      "issue_id": 660,
+      "rationale_must_mention": "TypeScript generics and conditional types"
+    }
+  },
+  {
+    "name": "rust_perf_match",
+    "failure_mode": "Picks a documentation issue over a performance issue for a performance specialist.",
+    "inputs": {
+      "user_profile": "Rust developer focused on performance: SIMD, benchmarking, zero-copy parsing.",
+      "repo_context": "Issue #770: 'Parser allocates on every token, 3x slower than needed' [perf, rust]\nIssue #771: 'Improve the getting-started guide' [docs]\nIssue #772: 'Add Windows CI runner' [ci]"
+    },
+    "expected": {
+      "issue_id": 770,
+      "rationale_must_mention": "Rust performance and allocation"
+    }
+  },
+  {
+    "name": "polyglot_picks_matching_domain",
+    "failure_mode": "Picks arbitrarily when the developer knows several of the listed languages.",
+    "inputs": {
+      "user_profile": "Full-stack developer. TypeScript and Python. Specialises in database query optimisation.",
+      "repo_context": "Issue #880: 'Slow dashboard query does a full table scan' [perf, python, database]\nIssue #881: 'Rename a variable for clarity in the UI code' [chore, typescript]\nIssue #882: 'Kernel module fails to build on 6.x' [bug, c]"
+    },
+    "expected": {
+      "issue_id": 880,
+      "rationale_must_mention": "database query optimisation"
+    }
+  },
+  {
+    "name": "beginner_good_first_issue_available",
+    "failure_mode": "Declines when a genuinely suitable beginner issue is present (over-refusal).",
+    "inputs": {
+      "user_profile": "New contributor. Some Python from a university course. Keen to start small.",
+      "repo_context": "Issue #910: 'Add a --version flag to the CLI' [enhancement, python, good first issue]\nIssue #911: 'Refactor the scheduler to use async primitives' [core, python, advanced]"
+    },
+    "expected": {
+      "issue_id": 910,
+      "rationale_must_mention": "a small, well-scoped Python task"
+    }
+  },
+  {
+    "name": "senior_architecture_appropriate",
+    "failure_mode": "Steers a senior engineer toward trivial work out of excess caution.",
+    "inputs": {
+      "user_profile": "Staff engineer, 12 years. Distributed systems, consensus protocols, Go and Rust.",
+      "repo_context": "Issue #1010: 'Leader election livelocks during a network partition' [bug, go, distributed, advanced]\nIssue #1011: 'Fix a broken link in the README' [docs, good first issue]"
+    },
+    "expected": {
+      "issue_id": 1010,
+      "rationale_must_mention": "distributed systems and consensus"
+    }
+  },
+  {
+    "name": "technical_writer_docs_match",
+    "failure_mode": "Assumes every contributor wants to write code.",
+    "inputs": {
+      "user_profile": "Technical writer. Documentation, API reference, and tutorials. Reads code but does not write production code.",
+      "repo_context": "Issue #1120: 'API reference is missing all authentication endpoints' [docs]\nIssue #1121: 'Race condition in the retry handler' [bug, go]\nIssue #1122: 'Add integration tests for the billing module' [test, python]"
+    },
+    "expected": {
+      "issue_id": 1120,
+      "rationale_must_mention": "documentation and API reference"
+    }
+  },
+  {
+    "name": "devops_ci_match",
+    "failure_mode": "Treats infrastructure work as interchangeable with application code.",
+    "inputs": {
+      "user_profile": "DevOps engineer. GitHub Actions, Docker, Kubernetes, build pipelines. Not an application developer.",
+      "repo_context": "Issue #1230: 'CI cache misses on every run, builds take 40 minutes' [ci, build]\nIssue #1231: 'Null pointer dereference in the parser' [bug, cpp]\nIssue #1232: 'Add a new sorting algorithm to the utils' [feature, python]"
+    },
+    "expected": {
+      "issue_id": 1230,
+      "rationale_must_mention": "CI and build pipelines"
+    }
+  }
+]

@@ -1,0 +1,1405 @@
+[
+  {
+    "name": "imports_of__tests_test_auth_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does tests/test_auth.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "tests/test_auth.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_auth_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What breaks if I change src/auth.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/billing/charge.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/session.py",
+        "tests/test_auth.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/auth.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_api_logout_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "If I modify src/api/logout.py, what else could be affected?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/login.py",
+        "src/auth.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/api/logout.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_db_models_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "If I modify src/db/models.py, what else could be affected?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/billing/webhook.py",
+        "src/db/queries.py",
+        "src/reports/summary.py",
+        "src/session.py",
+        "tests/test_auth.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/db/models.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "definition_of__delete_user",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where is delete_user defined?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "delete_user"
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__format_currency",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where does format_currency appear in the codebase?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/reports/summary.py",
+        "src/utils/format.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "format_currency"
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_db_queries_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What breaks if I change src/db/queries.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/db/models.py",
+        "src/reports/summary.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/db/queries.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "definition_of__save_session",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines save_session?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/queries.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "save_session"
+      }
+    }
+  },
+  {
+    "name": "importers_of__src_billing_charge_py",
+    "failure_mode": "Generated node set for a importers_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files import src/billing/charge.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/webhook.py",
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "importers_of",
+        "targets": [
+          "src/billing/charge.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "blast_radius__tests_test_session_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "If I modify tests/test_session.py, what else could be affected?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "tests/test_session.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_api_admin_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What is the blast radius of src/api/admin.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/api/admin.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "importers_of__src_db_models_py",
+    "failure_mode": "Generated node set for a importers_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Who imports src/db/models.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/billing/webhook.py",
+        "src/db/queries.py",
+        "src/reports/summary.py",
+        "src/session.py",
+        "tests/test_auth.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "importers_of",
+        "targets": [
+          "src/db/models.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_session_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/session.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/db/models.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/session.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "definition_of__format_currency",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where is format_currency defined?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/utils/format.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "format_currency"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_billing_charge_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/billing/charge.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/webhook.py",
+        "src/db/models.py",
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/billing/charge.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__parse_config",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where does parse_config appear in the codebase?"
+    },
+    "expected": {
+      "expected_paths": [
+        "legacy/helpers.php",
+        "legacy/parser.php"
+      ],
+      "expected_coverage_tier": "occurrence-only",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "parse_config"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_api_admin_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/api/admin.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/api/admin.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_reports_summary_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What is the blast radius of src/reports/summary.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py",
+        "src/billing/webhook.py",
+        "src/db/queries.py",
+        "src/utils/format.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/reports/summary.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__authenticate",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference authenticate?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py",
+        "tests/test_auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "authenticate"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_auth_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/auth.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/db/models.py",
+        "src/session.py",
+        "tests/test_auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/auth.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__save_session",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference save_session?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/queries.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "save_session"
+      }
+    }
+  },
+  {
+    "name": "importers_of__src_utils_format_py",
+    "failure_mode": "Generated node set for a importers_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Who imports src/utils/format.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "importers_of",
+        "targets": [
+          "src/utils/format.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "definition_of__charge_card",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines charge_card?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "charge_card"
+      }
+    }
+  },
+  {
+    "name": "definition_of__create_session",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where is create_session defined?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "create_session"
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_session_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "If I modify src/session.py, what else could be affected?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/session.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__Session",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference Session?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "Session"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_db_queries_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Show me everything one hop from src/db/queries.py."
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/models.py",
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/db/queries.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_api_login_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/api/login.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/api/login.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_session_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/session.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py",
+        "src/db/models.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/session.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "definition_of__login_handler",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines login_handler?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/login.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "login_handler"
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_billing_webhook_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "If I modify src/billing/webhook.py, what else could be affected?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py",
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/billing/webhook.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__login_handler",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference login_handler?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/login.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "login_handler"
+      }
+    }
+  },
+  {
+    "name": "definition_of__promote_admin",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines promote_admin?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "promote_admin"
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__charge_card",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where does charge_card appear in the codebase?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py",
+        "src/billing/webhook.py",
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "charge_card"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_api_login_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Show me everything one hop from src/api/login.py."
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/api/login.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "definition_of__test_authenticate",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where is test_authenticate defined?"
+    },
+    "expected": {
+      "expected_paths": [
+        "tests/test_auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "test_authenticate"
+      }
+    }
+  },
+  {
+    "name": "blast_radius__tests_test_auth_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What breaks if I change tests/test_auth.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "tests/test_auth.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_db_queries_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/db/queries.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/models.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/db/queries.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_billing_charge_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/billing/charge.py depend on?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/models.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/billing/charge.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__find_user",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference find_user?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/queries.py",
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "find_user"
+      }
+    }
+  },
+  {
+    "name": "definition_of__logout_handler",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines logout_handler?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/logout.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "logout_handler"
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_billing_charge_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What breaks if I change src/billing/charge.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/auth.py",
+        "src/billing/webhook.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/reports/summary.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/billing/charge.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_api_login_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What breaks if I change src/api/login.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/logout.py",
+        "src/auth.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/api/login.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "importers_of__src_session_py",
+    "failure_mode": "Generated node set for a importers_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Who imports src/session.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/login.py",
+        "src/api/logout.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "importers_of",
+        "targets": [
+          "src/session.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__create_session",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference create_session?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "create_session"
+      }
+    }
+  },
+  {
+    "name": "neighbors__tests_test_auth_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to tests/test_auth.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "tests/test_auth.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "importers_of__src_auth_py",
+    "failure_mode": "Generated node set for a importers_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What depends on src/auth.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/api/login.py",
+        "src/api/logout.py",
+        "src/session.py",
+        "tests/test_auth.py",
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "importers_of",
+        "targets": [
+          "src/auth.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "definition_of__find_user",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where is find_user defined?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/queries.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "find_user"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_reports_summary_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Show me everything one hop from src/reports/summary.py."
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py",
+        "src/db/queries.py",
+        "src/utils/format.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/reports/summary.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_api_admin_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/api/admin.py depend on?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/api/admin.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_db_models_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/db/models.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/db/queries.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/db/models.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "neighbors__tests_test_session_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Show me everything one hop from tests/test_session.py."
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "tests/test_session.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "importers_of__src_db_queries_py",
+    "failure_mode": "Generated node set for a importers_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files import src/db/queries.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "importers_of",
+        "targets": [
+          "src/db/queries.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "definition_of__authenticate",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines authenticate?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "authenticate"
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_billing_webhook_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/billing/webhook.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/billing/webhook.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_reports_summary_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/reports/summary.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py",
+        "src/db/queries.py",
+        "src/utils/format.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/reports/summary.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "definition_of__handle_webhook",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines handle_webhook?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/webhook.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "handle_webhook"
+      }
+    }
+  },
+  {
+    "name": "definition_of__Session",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines Session?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/models.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "Session"
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_utils_format_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Show me everything one hop from src/utils/format.py."
+    },
+    "expected": {
+      "expected_paths": [
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/utils/format.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "imports_of__tests_test_session_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does tests/test_session.py depend on?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "tests/test_session.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_billing_webhook_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/billing/webhook.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/billing/charge.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/billing/webhook.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "definition_of__User",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines User?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/auth.py",
+        "src/db/models.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "User"
+      }
+    }
+  },
+  {
+    "name": "definition_of__build_summary",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which file defines build_summary?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "build_summary"
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_api_logout_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/api/logout.py import?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/api/logout.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__test_authenticate",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Which files reference test_authenticate?"
+    },
+    "expected": {
+      "expected_paths": [
+        "tests/test_auth.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "test_authenticate"
+      }
+    }
+  },
+  {
+    "name": "occurrences_of__User",
+    "failure_mode": "Generated node set for a occurrences_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where does User appear in the codebase?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/api/admin.py",
+        "src/auth.py",
+        "src/billing/charge.py",
+        "src/db/models.py",
+        "src/db/queries.py",
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "occurrences_of",
+        "symbol": "User"
+      }
+    }
+  },
+  {
+    "name": "blast_radius__src_utils_format_py",
+    "failure_mode": "Generated node set for a blast_radius query does not match a correctly executed one.",
+    "inputs": {
+      "question": "If I modify src/utils/format.py, what else could be affected?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/reports/summary.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "blast_radius",
+        "targets": [
+          "src/utils/format.py"
+        ],
+        "max_hops": 3
+      }
+    }
+  },
+  {
+    "name": "imports_of__src_auth_py",
+    "failure_mode": "Generated node set for a imports_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What does src/auth.py depend on?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/db/models.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "imports_of",
+        "targets": [
+          "src/auth.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "neighbors__src_api_logout_py",
+    "failure_mode": "Generated node set for a neighbors query does not match a correctly executed one.",
+    "inputs": {
+      "question": "What files are directly connected to src/api/logout.py?"
+    },
+    "expected": {
+      "expected_paths": [
+        "src/session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "neighbors",
+        "targets": [
+          "src/api/logout.py"
+        ]
+      }
+    }
+  },
+  {
+    "name": "definition_of__test_create_session",
+    "failure_mode": "Generated node set for a definition_of query does not match a correctly executed one.",
+    "inputs": {
+      "question": "Where is test_create_session defined?"
+    },
+    "expected": {
+      "expected_paths": [
+        "tests/test_session.py"
+      ],
+      "expected_coverage_tier": "deep",
+      "reference_op": {
+        "op": "definition_of",
+        "symbol": "test_create_session"
+      }
+    }
+  }
+]

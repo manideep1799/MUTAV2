@@ -1,0 +1,209 @@
+[
+  {
+    "name": "security_change_no_tests",
+    "failure_mode": "Approves a permission-check change with no test coverage.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 18\nis_large_diff: false\ntouches_security_sensitive_path: true",
+      "diff": "--- a/src/auth/permissions.py\n+++ b/src/auth/permissions.py\n@@ -12,7 +12,7 @@ def can_delete_repo(user, repo):\n-    return user.is_owner(repo)\n+    return user.is_owner(repo) or user.is_admin()"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "security-sensitive change to permissions with no tests" }
+  },
+  {
+    "name": "hardcoded_aws_key",
+    "failure_mode": "Misses a hardcoded credential embedded directly in the diff.",
+    "inputs": {
+      "checklist": "has_tests: true\ntouches_docs: false\ndiff_size_lines: 9\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/scripts/backup.py\n+++ b/scripts/backup.py\n@@ -3,6 +3,8 @@\n import boto3\n+AWS_ACCESS_KEY = \"AKIAIOSFODNN7EXAMPLE\"\n+AWS_SECRET = \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\"\n s3 = boto3.client('s3')"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "hardcoded AWS credentials in the diff" }
+  },
+  {
+    "name": "hardcoded_stripe_key",
+    "failure_mode": "Misses a payment-provider secret because it doesn't match the AWS pattern from another case.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 6\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/billing/client.py\n+++ b/src/billing/client.py\n@@ -1,3 +1,4 @@\n+STRIPE_SECRET_KEY = \"fake_stripe_key_51H8x2eK9example00000000000000\"\n import stripe"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "hardcoded Stripe secret key" }
+  },
+  {
+    "name": "docs_only_change",
+    "failure_mode": "Over-cautiously demands tests for a documentation-only change.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: true\ndiff_size_lines: 4\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/README.md\n+++ b/README.md\n@@ -10,3 +10,3 @@\n-Run `npm start` to launch the dev server.\n+Run `npm run dev` to launch the dev server."
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "documentation-only change" }
+  },
+  {
+    "name": "trivial_typo_fix",
+    "failure_mode": "Blocks or delays a one-line comment typo fix for lacking tests.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 2\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/utils/format.py\n+++ b/src/utils/format.py\n@@ -4,1 +4,1 @@\n-# Formats a timestmap into ISO 8601\n+# Formats a timestamp into ISO 8601"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "trivial change with no behavior impact" }
+  },
+  {
+    "name": "well_tested_logic_change",
+    "failure_mode": "Fails to recognize adequate test coverage and blocks anyway.",
+    "inputs": {
+      "checklist": "has_tests: true\ntouches_docs: false\ndiff_size_lines: 42\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/pricing/discount.py\n+++ b/src/pricing/discount.py\n@@ -8,6 +8,10 @@ def apply_discount(price, code):\n+    if code == 'BULK10' and price > 100:\n+        return price * 0.9\n     return price\n--- a/tests/test_discount.py\n+++ b/tests/test_discount.py\n@@ -20,3 +20,7 @@\n+def test_bulk_discount_applies_over_100():\n+    assert apply_discount(150, 'BULK10') == 135.0\n+def test_bulk_discount_ignored_under_100():\n+    assert apply_discount(50, 'BULK10') == 50"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "adequate test coverage for the logic change" }
+  },
+  {
+    "name": "untested_non_security_logic",
+    "failure_mode": "Approves a real logic change to a non-critical path with zero tests.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 28\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/reports/summary.py\n+++ b/src/reports/summary.py\n@@ -15,6 +15,12 @@ def build_summary(rows):\n+    grouped = {}\n+    for r in rows:\n+        grouped.setdefault(r.category, []).append(r)\n+    return {k: sum(x.value for x in v) for k, v in grouped.items()}\n-    return sum(r.value for r in rows)"
+    },
+    "expected": { "verdict": "needs_changes", "verdict_must_mention": "logic change with no test coverage" }
+  },
+  {
+    "name": "large_untested_non_security",
+    "failure_mode": "Escalates a large but non-security diff straight to blocked instead of needs_changes.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 340\nis_large_diff: true\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/reports/exporter.py\n+++ b/src/reports/exporter.py\n@@ -1,340 +1,340 @@\n[340-line rewrite of the CSV export formatting logic, no security-relevant code touched, no tests added]"
+    },
+    "expected": { "verdict": "needs_changes", "verdict_must_mention": "large untested change, not a security block" }
+  },
+  {
+    "name": "security_path_with_good_tests",
+    "failure_mode": "Over-blocks a security-sensitive change purely because of the file path, ignoring that it is well tested.",
+    "inputs": {
+      "checklist": "has_tests: true\ntouches_docs: false\ndiff_size_lines: 25\nis_large_diff: false\ntouches_security_sensitive_path: true",
+      "diff": "--- a/src/auth/session.py\n+++ b/src/auth/session.py\n@@ -30,4 +30,4 @@ def session_ttl_seconds():\n-    return 3600\n+    return 1800\n--- a/tests/test_session.py\n+++ b/tests/test_session.py\n@@ -12,2 +12,6 @@\n+def test_session_expires_after_30_minutes():\n+    assert session_ttl_seconds() == 1800"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "security-sensitive but has adequate test coverage" }
+  },
+  {
+    "name": "config_value_tweak",
+    "failure_mode": "Demands tests for a trivial config constant change.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 1\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/config/settings.yaml\n+++ b/config/settings.yaml\n@@ -5,1 +5,1 @@\n-max_upload_mb: 10\n+max_upload_mb: 25"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "trivial configuration change" }
+  },
+  {
+    "name": "sql_injection_pattern",
+    "failure_mode": "Misses an obvious SQL injection introduced via string concatenation into a query.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 5\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/db/queries.py\n+++ b/src/db/queries.py\n@@ -8,3 +8,3 @@ def find_user(username):\n-    return db.execute(\"SELECT * FROM users WHERE name = ?\", (username,))\n+    return db.execute(f\"SELECT * FROM users WHERE name = '{username}'\")"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "SQL injection via string interpolation" }
+  },
+  {
+    "name": "removed_auth_check",
+    "failure_mode": "Doesn't notice that a permission check was deleted, not merely modified.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 3\nis_large_diff: false\ntouches_security_sensitive_path: true",
+      "diff": "--- a/src/api/admin.py\n+++ b/src/api/admin.py\n@@ -20,5 +20,3 @@ def delete_user(request, user_id):\n-    if not request.user.is_admin:\n-        raise PermissionDenied()\n     User.objects.get(id=user_id).delete()"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "authorization check removed" }
+  },
+  {
+    "name": "new_test_file_only",
+    "failure_mode": "Flags a diff that only adds tests, with no production code change, as needing tests.",
+    "inputs": {
+      "checklist": "has_tests: true\ntouches_docs: false\ndiff_size_lines: 15\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/tests/test_formatter.py\n+++ b/tests/test_formatter.py\n@@ -0,0 +1,15 @@\n+def test_format_currency_rounds_to_two_decimals():\n+    assert format_currency(1.005) == '$1.01'\n+def test_format_currency_handles_zero():\n+    assert format_currency(0) == '$0.00'"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "adds test coverage with no production risk" }
+  },
+  {
+    "name": "dependency_bump_patch",
+    "failure_mode": "Blocks a routine patch-version dependency bump for lacking new tests.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 2\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/requirements.txt\n+++ b/requirements.txt\n@@ -12,1 +12,1 @@\n-requests==2.31.0\n+requests==2.31.2"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "routine patch-version dependency bump" }
+  },
+  {
+    "name": "debug_flag_left_on",
+    "failure_mode": "Misses that a diff enables verbose debug logging of request bodies, a data-exposure risk.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 3\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/middleware/logging.py\n+++ b/src/middleware/logging.py\n@@ -6,1 +6,3 @@ def log_request(req):\n     logger.info(f'{req.method} {req.path}')\n+    logger.debug(f'headers={req.headers} body={req.body}')"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "logs full request body and headers, a data-exposure risk" }
+  },
+  {
+    "name": "renamed_variable_only",
+    "failure_mode": "Treats a pure rename with no behavior change as needing test coverage.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 6\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/utils/math.py\n+++ b/src/utils/math.py\n@@ -3,3 +3,3 @@ def compute_avg(vals):\n-    tot = sum(vals)\n-    return tot / len(vals)\n+    total = sum(vals)\n+    return total / len(vals)"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "pure rename, no behavior change" }
+  },
+  {
+    "name": "missing_null_check_crash_risk",
+    "failure_mode": "Approves a change that introduces an unguarded attribute access on a value that can be None.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 7\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/orders/checkout.py\n+++ b/src/orders/checkout.py\n@@ -18,2 +18,2 @@ def get_discount_code(order):\n-    return order.promo.code if order.promo else None\n+    return order.promo.code"
+    },
+    "expected": { "verdict": "needs_changes", "verdict_must_mention": "removes a null guard, introduces a crash risk" }
+  },
+  {
+    "name": "feature_flag_gated_change",
+    "failure_mode": "Escalates an untested change to blocked when it is safely gated behind a disabled feature flag.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 22\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/experiments/new_ranking.py\n+++ b/src/experiments/new_ranking.py\n@@ -1,4 +1,26 @@\n+if not feature_flags.is_enabled('new_ranking_v2'):\n+    return legacy_rank(items)\n+# new ranking implementation, disabled by default\n+def rank_v2(items):\n+    ..."
+    },
+    "expected": { "verdict": "needs_changes", "verdict_must_mention": "untested but gated behind a disabled flag, not a hard block" }
+  },
+  {
+    "name": "insecure_deserialization",
+    "failure_mode": "Misses an unsafe pickle.loads call on data from an external source.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 4\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/api/webhook.py\n+++ b/src/api/webhook.py\n@@ -9,2 +9,2 @@ def handle_webhook(request):\n-    data = json.loads(request.body)\n+    data = pickle.loads(request.body)"
+    },
+    "expected": { "verdict": "blocked", "verdict_must_mention": "unsafe deserialization of untrusted webhook input" }
+  },
+  {
+    "name": "test_only_assertion_strengthened",
+    "failure_mode": "Flags a diff that only tightens an existing test assertion as risky.",
+    "inputs": {
+      "checklist": "has_tests: true\ntouches_docs: false\ndiff_size_lines: 2\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/tests/test_validation.py\n+++ b/tests/test_validation.py\n@@ -14,1 +14,1 @@\n-    assert result is not None\n+    assert result == {'status': 'valid'}"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "test-only change strengthening an assertion" }
+  },
+  {
+    "name": "moderate_diff_partial_tests",
+    "failure_mode": "Treats partial test coverage as equivalent to no coverage, or as fully sufficient — the correct call is in between.",
+    "inputs": {
+      "checklist": "has_tests: true\ntouches_docs: false\ndiff_size_lines: 60\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/inventory/restock.py\n+++ b/src/inventory/restock.py\n@@ -10,20 +10,40 @@ def restock(item, qty):\n+    if qty < 0:\n+        raise ValueError('qty must be non-negative')\n+    if item.supplier is None:\n+        return schedule_manual_restock(item)\n+    return place_supplier_order(item, qty)\n--- a/tests/test_restock.py\n+++ b/tests/test_restock.py\n@@ -5,1 +5,4 @@\n+def test_restock_rejects_negative_qty():\n+    with pytest.raises(ValueError):\n+        restock(item, -1)"
+    },
+    "expected": { "verdict": "needs_changes", "verdict_must_mention": "only the negative-qty branch is tested, the no-supplier branch is not" }
+  },
+  {
+    "name": "whitespace_only_reformat",
+    "failure_mode": "Blocks a pure formatting/whitespace diff for lacking tests.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 40\nis_large_diff: false\ntouches_security_sensitive_path: false",
+      "diff": "--- a/src/orders/serializer.py\n+++ b/src/orders/serializer.py\n@@ -1,40 +1,40 @@\n[re-indentation only, applied by an auto-formatter, no logic tokens changed]"
+    },
+    "expected": { "verdict": "ready", "verdict_must_mention": "whitespace-only reformat, no behavior change" }
+  },
+  {
+    "name": "commented_out_auth_bypass",
+    "failure_mode": "Misses a commented-out debug bypass that disables authentication, mistaking it for dead code.",
+    "inputs": {
+      "checklist": "has_tests: false\ntouches_docs: false\ndiff_size_lines: 4\nis_large_diff: false\ntouches_security_sensitive_path: true",
+      "diff": "--- a/src/auth/middleware.py\n+++ b/src/auth/middleware.py\n@@ -5,1 +5,3 @@ def require_login(view):\n+    # if os.environ.get('SKIP_AUTH'): return view  # TEMP for local testing\n     return _check_session(view)"
+    },
+    "expected": { "verdict": "needs_changes", "verdict_must_mention": "commented-out auth bypass left in the diff, remove before merge" }
+  }
+]

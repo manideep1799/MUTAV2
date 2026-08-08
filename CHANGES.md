@@ -358,3 +358,115 @@ new issues (the one pre-existing `no-explicit-any` warning is in
 `react-markdown` install was `--no-save` and touched nothing in
 `package.json`/`package-lock.json` — confirmed via `git status` showing
 only `index.tsx` changed.
+
+## 10. Synced against upstream `Saradwanth-116/git-quest`, which had moved on without us
+
+This fork branched from `git-quest` early and diverged (HyDE, the
+council gate, B2B, local embeddings — none of that exists upstream).
+Upstream, meanwhile, kept moving independently and built the piece our
+own docs kept flagging as absent: a real Mutagent evaluate/optimize
+harness with real datasets. Diffed both trees file-by-file and pulled
+across what was real, fixed two regressions the diff exposed, and left
+out one file that fabricates results. Nothing here was guessed —
+every claim below is a diffed file.
+
+**Regressions fixed** (this fork had these, upstream had already fixed them):
+- `clients/llm_client.py` — `complete()` had silently lost its
+  `json_mode` parameter (`response_format: json_object`) and `_get()`
+  had lost `OLLAMA_BASE_URL` routing entirely, so every caller through
+  the shared client (gate, issue_rec, pr_check, issue_health) was stuck
+  on Groq with no JSON-mode enforcement, relying purely on prompt text
+  to produce parseable JSON. Restored both, and `json_complete()` now
+  actually passes `json_mode=True` again. `MAX_RETRIES` restored to 10.
+- `pipeline/gate.py` — wasn't passing `json_mode=True` even though the
+  gate's entire output is JSON the caller depends on parsing correctly.
+- `mutagent/prompts/council.txt` — this fork's rewritten version (part
+  2) was stricter than upstream's tuned one: it could reject harmless
+  greetings and general-overview questions, and it never told the model
+  not to wrap output in a markdown fence. Reverted to upstream's
+  version, which is the one that's actually been run through the
+  harness (see `mutagent/reports/council.delta.json`, now included).
+- `indexing.py` — had a duplicate `from vector_store import add_chunks`
+  import, and a comment claiming the embedding batch loop exists
+  because of "OpenAI's embeddings endpoint" request-size limits — stale
+  from before part 8 moved embeddings local. Fixed both, and added
+  `graph_nodes`/`graph_edges` counts to the `/index` response (upstream
+  had this; we didn't).
+
+**Real upgrade ported:**
+- `hybrid_retriever.py`'s graph-facts injection used to trigger only on
+  three hardcoded keywords (`"break"`, `"impact"`, `"rely"`) and find
+  target files by literal substring match against the question text —
+  brittle, and blind to anything phrased differently. Replaced with
+  upstream's approach: every graph/hybrid question now goes through a
+  new prompt (`mutagent/prompts/graph_query.txt`) that asks the model to
+  translate the question into one of six structured graph operations
+  (`blast_radius`, `importers_of`, `imports_of`, `definition_of`,
+  `occurrences_of`, `neighbors`), which then actually executes against
+  `graph/query_dsl.execute_query()` — the DSL executor was already
+  identical in both trees, only the query-construction step was
+  outdated here.
+
+**The actual gap this closes — a real self-evolving loop:**
+Every previous document in this repo (`CHANGES.md` parts 1-9, the PDC,
+`B2B_AUDIT.md`) said the same honest thing: Mutagent's optimize/evaluate
+harness doesn't exist in this fork, only the receiving-side prompts and
+traces do. That was true when written and is no longer true — upstream
+built it. Pulled across wholesale:
+- `mutagent/harness.py` — `evaluate()` scores a prompt against a
+  dataset+rubric with an LLM judge per criterion, severity-gated
+  (a `critical` criterion failing fails the case regardless of weighted
+  mean); `optimize()` is a genetic-mutation loop over generations x
+  variants that keeps the highest scorer, and is honest when a mutation
+  call comes back unparseable (`mutation_failed`, re-evaluates the
+  unchanged prompt rather than pretending it improved).
+- `mutagent/run.py` — the CLI (`python -m mutagent.run <target>
+  [--optimize]`), `mutagent/run_graph_query.py` — a separate runner for
+  the graph-query target since it's scored by node-set F1 against the
+  real executed graph, not an LLM judge.
+- `mutagent/datasets/*.json` + `mutagent/rubrics/*.json` — six real
+  targets (`council`, `router`, `issue_rec`, `pr_check`, `issue_health`,
+  `graph_query`), 22-70 cases each, none synthetic filler.
+- `mutagent/gen_graph_dataset.py` — generates the graph_query dataset by
+  actually running the DSL against a real graph rather than
+  hand-labelling expected answers. Fixed a real path bug while porting
+  it: it wrote to `<repo_root>/mutagent/datasets/graph_query.json`
+  instead of `<repo_root>/backend/mutagent/datasets/graph_query.json`
+  (used the wrong `REPO_ROOT`-relative path; switched it to
+  `config.DATASETS_DIR`, the same single source of truth every other
+  loader in this repo already uses).
+- `mutagent/reports/council.delta.json` and `issue_rec.delta.json` —
+  real prior runs, kept as-is including the unflattering parts: the
+  council run's optimize loop failed to mutate for 3 straight
+  generations (`mutation_failed`, score never moved off baseline) and
+  the report shows that plainly rather than hiding it.
+- `.agents/skills/ship/SKILL.md`, `scripts/ship.py`,
+  `Dockerfile.backend`, `Dockerfile.frontend`, `docker-compose.yml`,
+  `run_mutagent.bat` — a `*ship` ADL stage that packages the app for
+  `docker-compose up --build`. Checked what `ship.py` actually does
+  before including it: it writes three static files and nothing else —
+  no fake gate, no claim of checking a scorecard that doesn't exist.
+
+**Verified before committing:** `python -m mutagent.run <target>
+--dry-run` run against all five LLM-judged targets
+(council/router/issue_rec/pr_check/issue_health) — all validate cleanly,
+every dataset case substitutes into its prompt without a missing key.
+Every touched/added `.py` file compiles (`py_compile`); the modules that
+don't depend on `tree_sitter_language_pack` (not installed in this
+sandbox, unrelated to this change) import cleanly too.
+
+**Deliberately left out — upstream has a file that fabricates results:**
+`backend/test_architecture_flow.py` is a manual smoke-test script whose
+step 5 ("Simulating Mutagent Optimization Cycle") writes a **hardcoded**
+`{"baseline_score": 0.45, "optimized_score": 0.88, ...}` straight into
+`mutagent/reports/issue_rec.delta.json` — overwriting the real report
+from an actual harness run with invented numbers, labeled only
+`"notes": "Simulated mutagent optimization run"` in a field nobody
+reads before the governance dashboard displays the score. Not pulled
+in. If evidence of the optimize loop is wanted beyond the dry-run above,
+the honest path is running `python -m mutagent.run issue_rec
+--optimize` for real against a live `GROQ_API_KEY`, not running this
+script. `backend/run_stages.py` was also left out — a second smoke-test
+script that calls `POST /ask` expecting a JSON body, which no longer
+matches this fork's streaming `/ask` contract (part 5); it would need
+rewriting to consume the `<<<META>>>` trailer, not a straight copy.

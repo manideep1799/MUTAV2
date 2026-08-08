@@ -1,0 +1,42 @@
+{
+  "target_id": "council",
+  "description": "Scores the merged AI-Council gate: the accept/reject verdict, the retrieval route, and the query decomposition — all emitted by one prompt. A case passes only if every CRITICAL criterion passes. IMPORTANT: this rubric deliberately scores every job the prompt does, old and new. Because decomposition was added to a prompt that already produced the gate verdict and the route, optimizing for decomposition alone could silently degrade gate accuracy while a single aggregate score still improved. Scoring all criteria and reporting them separately is what makes that regression visible. See docs/QUERY_DECOMPOSITION.md risk 5.",
+  "gate": "critical",
+  "pass_threshold": 0.7,
+  "note_on_scoring": "This target has four critical criteria, so unlike issue_rec the weighted mean cannot mirror the gate: four weights each large enough to breach the threshold alone would sum past 1.0. The severity gate is the operative verdict here and the mean is diagnostic only. Read cases-passed, not the mean.",
+  "co_evaluated_by": {
+    "router": "Same underlying prompt (mutagent/prompts/council.txt) — no separate router prompt exists. router.json isolates genuinely ambiguous vector/graph/hybrid routing decisions this dataset does not stress-test, using single-intent queries constructed to already be valid so gate_verdict and decomposition are expected trivial. Re-run BOTH suites after optimizing this prompt: improving one behavior can regress the other. See docs/QUERY_DECOMPOSITION.md risk 5."
+  },
+  "criteria": [
+    {
+      "name": "gate_verdict",
+      "severity": "critical",
+      "weight": 0.3,
+      "description": "The accept/reject decision must match the expected verdict. Treat the output as ACCEPTING the query when all four of clarity, scope, answerability and specificity are true, and as REJECTING it when any one of them is false. Compare that derived verdict against the expected accept field. When the expected verdict is reject and the expected failing_property is given, the output must also have that specific property set to false — rejecting for the wrong reason is still a failure, because the reason determines whether the system asks the user to clarify or tells them the question cannot be answered from source code. Score 1.0 when the verdict matches (and, for rejections, the named property is false); score 0.0 otherwise."
+    },
+    {
+      "name": "route_correctness",
+      "severity": "critical",
+      "weight": 0.25,
+      "description": "The top-level route must match the expected route. Routes mean: vector for conceptual questions about what code does or how it works; graph for structural questions about dependencies, callers, definitions, or the impact of a change; hybrid when the question needs both a conceptual understanding and structural facts, or when its sub-questions route differently. IMPORTANT: when the expected route is null the query was expected to be rejected, and this criterion passes trivially with 1.0 regardless of what route the output names — routing is not meaningful for a rejected query and is judged by gate_verdict instead. Score 1.0 when the route matches expected or expected is null; score 0.0 otherwise."
+    },
+    {
+      "name": "decomposition_count",
+      "severity": "critical",
+      "weight": 0.25,
+      "description": "The number of entries in sub_queries must equal the expected sub_query_count. This is the criterion that catches over-splitting, which is the primary failure mode of decomposition: a question about one subsystem that merely names two related concepts is ONE question, and splitting it fragments the context and produces a worse answer than not splitting at all. A query asking a single thing must yield exactly one entry, never zero. Count the entries and compare. Score 1.0 on an exact match; score 0.0 otherwise."
+    },
+    {
+      "name": "sub_query_self_contained",
+      "severity": "critical",
+      "weight": 0.12,
+      "description": "Every entry in sub_queries must stand alone as if it were the user's first message. A sub-query containing an unresolved pronoun or demonstrative reference — it, its, they, them, that module, this one — where the original query named a specific entity is a failure, because that sub-query will retrieve nothing on its own. The entity must be carried across the split: splitting 'what does the login function do and where is it called' into a second part reading 'where is it called' is wrong, while 'where is the login function called' is correct. Judge only the text of the sub-queries. When there is exactly one sub-query and it restates the original query, this criterion passes. Score 1.0 when every entry is self-contained; score 0.0 if any entry carries a dangling reference."
+    },
+    {
+      "name": "format_compliance",
+      "severity": "standard",
+      "weight": 0.08,
+      "description": "The output must contain a parseable JSON object carrying the four boolean properties clarity, scope, answerability and specificity, a route field, and a sub_queries list whose entries each have a text string and a route string. A JSON object wrapped in a markdown code fence counts as compliant — downstream parsing strips fences, so fencing is not a defect. Score 1.0 when the JSON parses and every required field is present with the right type; score 0.0 only when the JSON cannot be parsed at all, or a required field is missing or the wrong type."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "target_id": "issue_health",
+  "description": "Scores the issue-health prompt behind the maintainer dashboard's mislabelled[] list (design API spec: GET /maintainer-health -> {score, mislabelled[], latency_days}) — the feature the design doc calls 'the differentiation nobody else shows'. Four-way classification: healthy (labels match actual scope, issue is actionable), mislabelled (carries a beginner-oriented label — good first issue, help wanted, beginner friendly — but the body reveals work requiring deep domain knowledge or architecture changes), vague (lacks the information needed to act on it, independent of labels), stale (long open with little or no engagement, may be abandoned). Stretch priority per the design doc, but held to the same >=20 case floor and severity-gated structure as the other targets.",
+  "gate": "critical",
+  "pass_threshold": 0.7,
+  "criteria": [
+    {
+      "name": "verdict_correctness",
+      "severity": "critical",
+      "weight": 0.45,
+      "description": "The output's verdict field must exactly match the expected verdict among healthy, mislabelled, vague, and stale. Judging this well requires reading the issue BODY, not just its title or labels — several cases have titles or labels that suggest one verdict while the body reveals another (a title like 'add a cache' or 'improve error messages' that undersells real complexity; a 'good first issue' label on work requiring deep domain knowledge; a long days_open value that looks stale but is contradicted by recent active comments). Judge only the verdict field. Score 1.0 on an exact match; score 0.0 otherwise."
+    },
+    {
+      "name": "rationale_grounding",
+      "severity": "critical",
+      "weight": 0.40,
+      "description": "The rationale must correctly identify the SPECIFIC content or signal that drove the verdict, not merely land on the right verdict by coincidence. Compare the rationale's substance against the expected verdict_must_mention description; wording need not match, substance must. A mislabelled verdict whose rationale says the issue 'seems hard' without naming what specifically makes it inappropriate for a newcomer is not grounded, even if the verdict itself is correct. Score 1.0 when the rationale correctly identifies the driving fact; score 0.0 otherwise."
+    },
+    {
+      "name": "format_compliance",
+      "severity": "standard",
+      "weight": 0.15,
+      "description": "The output must contain a parseable JSON object with a verdict field (one of healthy, mislabelled, vague, stale) and a non-empty rationale string. A markdown code fence around the JSON counts as compliant. Score 1.0 when the JSON parses and both fields are present with the right type and verdict is one of the four allowed strings; score 0.0 otherwise."
+    }
+  ]
+}

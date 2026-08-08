@@ -1,0 +1,15 @@
+{
+  "target_id": "graph_query",
+  "description": "Target #3. Unlike every other target, this one is NOT scored by an LLM judge — there is nothing to calibrate. The model translates a natural-language question into a JSON query; the query is EXECUTED against the real graph via backend.graph.query_dsl.execute_query(); the returned node set is compared against a ground-truth node set produced by running a correct reference query through the SAME execute_query function. Scoring is Node precision/recall/F1 over the set of file paths returned, per design §11. This file documents the method for the target registry; the actual scorer is mutagent/run_graph_query.py, not mutagent/harness.py's evaluate(), because that harness assumes an LLM-judge-per-criterion shape this target does not have.",
+  "eval_method": "node_set_f1",
+  "harness": "mutagent/run_graph_query.py",
+  "pass_threshold_f1": 0.7,
+  "scoring": {
+    "precision": "|predicted_paths ∩ expected_paths| / |predicted_paths|, 1.0 if predicted is empty and expected is empty",
+    "recall": "|predicted_paths ∩ expected_paths| / |expected_paths|",
+    "f1": "harmonic mean of precision and recall, 0.0 if both are 0",
+    "note": "The model is not required to choose the same op as the reference query used to generate ground truth — a different op that happens to return the identical correct node set is not a failure. Only the executed result is compared, matching 'run the query, compare node sets' from design §09/§11 literally."
+  },
+  "malformed_query_handling": "A response that is not parseable JSON, or whose parsed op is unknown, scores 0.0 precision/recall/F1 for that case — matching execute_query's own contract of returning an error VALUE rather than raising, so a bad LLM query is a scored failure, not a crash.",
+  "dataset_provenance": "Generated, not hand-labelled, by mutagent/gen_graph_dataset.py — it walks a real graph and calls execute_query() to produce each case's expected_paths, rather than a human asserting an answer. Run against mutagent/graph_fixtures/build_sample_graph.py's fixture (a hand-built but realistic 16-file repo) until a live indexed repo exists, at which point --repo-id points the generator at the real graph and the dataset scales with repo size at no additional authoring cost — the asset design §09 calls out for this target specifically."
+}

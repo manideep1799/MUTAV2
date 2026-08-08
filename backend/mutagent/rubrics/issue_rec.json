@@ -1,0 +1,26 @@
+{
+  "target_id": "issue_rec",
+  "description": "Scores the issue-recommendation prompt. A case passes only if every CRITICAL criterion passes; standard criteria contribute to the score but do not gate. This mirrors Mutagent's binary, severity-gated verdict.",
+  "gate": "critical",
+  "pass_threshold": 0.7,
+  "criteria": [
+    {
+      "name": "skill_alignment",
+      "severity": "critical",
+      "weight": 0.45,
+      "description": "The recommendation must fit the developer's stated languages AND experience level. When no listed issue is in one of the developer's languages, or every candidate is far beyond their stated skill level, the correct output is issue_id null. Recommending an issue in an unknown language, or one clearly beyond the developer's depth, is a failure. Judge this by comparing ONLY the issue_id field of the output against the expected issue_id. Ignore the rationale text entirely for this criterion — its wording is checked elsewhere. Score 1.0 when the output's issue_id equals the expected issue_id (null equals null); score 0.0 otherwise."
+    },
+    {
+      "name": "hallucination_prevention",
+      "severity": "critical",
+      "weight": 0.40,
+      "description": "Groundedness only: any recommended issue_id must be an integer that literally appears in the OPEN ISSUES list shown in the input. Inventing an issue number, or citing one not present, is the failure this criterion catches. Judge this by checking whether the output's issue_id appears in the input — nothing else. IMPORTANT: ignore the expected issue_id entirely for this criterion. An output may recommend the WRONG issue and still score 1.0 here, so long as that issue genuinely exists in the input; whether it was the right choice is judged by skill_alignment. Score 1.0 if the recommended id appears in the input, or if issue_id is null; score 0.0 only if the id appears nowhere in the input."
+    },
+    {
+      "name": "format_compliance",
+      "severity": "standard",
+      "weight": 0.15,
+      "description": "The output must contain a parseable JSON object carrying an issue_id field (an integer or null) and a rationale field (a non-empty string). A JSON object wrapped in a markdown code fence counts as compliant — downstream parsing strips fences, so fencing is not a defect. Score 1.0 when the JSON parses and both fields are present with the right types; score 0.0 only when the JSON cannot be parsed at all, or a required field is missing or the wrong type."
+    }
+  ]
+}

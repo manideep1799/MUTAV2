@@ -33,7 +33,7 @@ def run_gate(query: str) -> dict:
     session. A cache hit also means no duplicate trace line is written.
     """
     prompt = load_prompt("council").format(query=query)
-    raw_output, latency_ms = complete(prompt, temperature=0.1)
+    raw_output, latency_ms = complete(prompt, temperature=0.1, json_mode=True)
 
     trace(component="council", prompt=prompt, raw_output=raw_output,
           latency_ms=latency_ms, extra={"query": query})

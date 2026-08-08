@@ -1,0 +1,200 @@
+[
+  {
+    "name": "genuine_good_first_typo",
+    "failure_mode": "Over-flags a trivial fix as mislabelled because the repository domain sounds intimidating.",
+    "inputs": {
+      "issue": "Title: Fix typo in kernel module README\nLabels: good first issue, documentation\nBody: The README under drivers/net says 'recieve' instead of 'receive' in three places. Just a spelling fix, no code changes needed.",
+      "signals": "days_open: 3\ncomment_count: 1\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "genuinely trivial despite the intimidating-sounding repo domain" }
+  },
+  {
+    "name": "mislabelled_architecture_rewrite",
+    "failure_mode": "Trusts the good-first-issue label without reading that the body describes deep architectural work.",
+    "inputs": {
+      "issue": "Title: Add support for custom middleware ordering\nLabels: good first issue\nBody: Currently middleware runs in registration order. We need a priority system that lets plugins declare dependencies on each other and topologically sorts the execution chain, while staying backward compatible with the existing registration API.",
+      "signals": "days_open: 45\ncomment_count: 12\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "mislabelled", "verdict_must_mention": "requires a topological dependency sort and backward-compatible architecture change, not beginner work" }
+  },
+  {
+    "name": "mislabelled_subtle_title",
+    "failure_mode": "Judges only the title, which sounds small, and misses that the body reveals real complexity.",
+    "inputs": {
+      "issue": "Title: Improve error messages\nLabels: good first issue, help wanted\nBody: Right now errors from the parser are just 'SyntaxError'. We want proper error recovery: continue parsing after an error, collect multiple diagnostics per file, and report accurate line/column spans even when the lexer had already de-synced from brace mismatches.",
+      "signals": "days_open: 60\ncomment_count: 8\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "mislabelled", "verdict_must_mention": "parser error recovery and diagnostic spans is compiler-internals work, not a small fix" }
+  },
+  {
+    "name": "vague_no_repro_steps",
+    "failure_mode": "Reads a bug report as healthy because it has clear labels, ignoring that it cannot actually be acted on.",
+    "inputs": {
+      "issue": "Title: App crashes sometimes\nLabels: bug\nBody: It just crashes. Happens randomly. Please fix.",
+      "signals": "days_open: 20\ncomment_count: 0\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "vague", "verdict_must_mention": "no reproduction steps, environment, or error details to act on" }
+  },
+  {
+    "name": "vague_feature_no_criteria",
+    "failure_mode": "Treats an underspecified feature request as healthy because the ask sounds reasonable.",
+    "inputs": {
+      "issue": "Title: Better search\nLabels: enhancement\nBody: The search could be improved. It would be nice if it worked better.",
+      "signals": "days_open: 15\ncomment_count: 1\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "vague", "verdict_must_mention": "no acceptance criteria or specifics about what 'better' means" }
+  },
+  {
+    "name": "stale_abandoned_no_engagement",
+    "failure_mode": "Ignores strong staleness signals and evaluates only the issue content.",
+    "inputs": {
+      "issue": "Title: Support dark mode\nLabels: enhancement, good first issue\nBody: Add a dark mode toggle to settings. Should be a straightforward CSS variable swap.",
+      "signals": "days_open: 720\ncomment_count: 0\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "stale", "verdict_must_mention": "open nearly two years with zero engagement, likely abandoned or superseded" }
+  },
+  {
+    "name": "not_stale_recent_activity",
+    "failure_mode": "Flags a long-open issue as stale despite active, ongoing discussion.",
+    "inputs": {
+      "issue": "Title: Migrate to the new plugin API\nLabels: enhancement\nBody: Tracking issue for the plugin API migration. See linked PRs for progress on each subsystem.",
+      "signals": "days_open: 400\ncomment_count: 34\nhas_linked_pr: true"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "long-running but actively tracked, not stale" }
+  },
+  {
+    "name": "healthy_clear_bug_report",
+    "failure_mode": "Under-values a well-written bug report by flagging it as vague anyway.",
+    "inputs": {
+      "issue": "Title: TypeError when passing an empty list to batch_process()\nLabels: bug\nBody: Steps to reproduce: call batch_process([]) on v2.3.1, Python 3.11. Expected: returns an empty result. Actual: raises TypeError: 'NoneType' object is not iterable at batch.py line 42, because the internal accumulator is never initialized when the input is empty.",
+      "signals": "days_open: 2\ncomment_count: 1\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "clear repro steps, environment, and exact failure location" }
+  },
+  {
+    "name": "healthy_well_scoped_feature",
+    "failure_mode": "Flags a properly specified feature request as vague because it is asking for something new.",
+    "inputs": {
+      "issue": "Title: Add --output-format=json flag to the CLI\nLabels: enhancement, good first issue\nBody: The CLI currently only prints human-readable tables. Add a --output-format flag accepting 'table' (default) or 'json'. When json is selected, print the same data as a single JSON array to stdout instead of a table. Acceptance: `mycli list --output-format=json | jq .` should work.",
+      "signals": "days_open: 5\ncomment_count: 2\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "concrete flag behavior and a testable acceptance criterion" }
+  },
+  {
+    "name": "mislabelled_beginner_friendly_tag",
+    "failure_mode": "Only checks for 'good first issue' specifically and misses the equivalent 'beginner friendly' label.",
+    "inputs": {
+      "issue": "Title: Optimize the hot path in the tokenizer\nLabels: beginner friendly, performance\nBody: Profile shows tokenize() spends 40% of its time in regex backtracking. Needs to be rewritten as a hand-written state machine without changing the public API or token boundaries.",
+      "signals": "days_open: 90\ncomment_count: 6\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "mislabelled", "verdict_must_mention": "rewriting a tokenizer as a state machine while preserving exact token boundaries is not beginner-friendly" }
+  },
+  {
+    "name": "healthy_no_beginner_label_complex_task",
+    "failure_mode": "Flags a genuinely hard task as mislabelled even though it carries no beginner label at all.",
+    "inputs": {
+      "issue": "Title: Implement distributed lease renewal for the leader election protocol\nLabels: core, advanced\nBody: Leader nodes must renew their lease every 5s with quorum acknowledgment, handling network partitions without split-brain. See design doc linked below.",
+      "signals": "days_open: 30\ncomment_count: 5\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "correctly labelled advanced/core, no beginner label to mismatch" }
+  },
+  {
+    "name": "vague_plus_stale_pick_one",
+    "failure_mode": "When an issue is both vague and old, defaults to the wrong category instead of the more informative one.",
+    "inputs": {
+      "issue": "Title: Fix the thing with uploads\nLabels: bug\nBody: Uploads are broken sometimes.",
+      "signals": "days_open: 500\ncomment_count: 0\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "vague", "verdict_must_mention": "no actionable detail regardless of how long it has been open — vague is the more informative flag here since it explains why nobody engaged" }
+  },
+  {
+    "name": "mislabelled_docs_label_but_core_change",
+    "failure_mode": "Trusts a 'documentation' label at face value when the body describes a real code change.",
+    "inputs": {
+      "issue": "Title: Update the getting-started docs\nLabels: documentation, good first issue\nBody: The getting-started guide is outdated because the auth flow changed. We need to actually redesign the onboarding sequence (the guide currently describes a flow that no longer exists) and document the new one, which isn't finalized yet.",
+      "signals": "days_open: 40\ncomment_count: 9\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "mislabelled", "verdict_must_mention": "blocked on an unfinalized onboarding redesign, not a documentation update a newcomer can complete" }
+  },
+  {
+    "name": "healthy_labelled_intermediate_correctly",
+    "failure_mode": "Applies the mislabelled verdict to an issue whose difficulty label already matches its actual scope.",
+    "inputs": {
+      "issue": "Title: Add pagination to the /users endpoint\nLabels: enhancement, intermediate\nBody: Add limit/offset query params to GET /users, defaulting to limit=50. Update the response to include a total_count field. Existing tests for the endpoint should be extended, not rewritten.",
+      "signals": "days_open: 8\ncomment_count: 2\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "labelled intermediate, which matches a moderate-scope endpoint change" }
+  },
+  {
+    "name": "stale_with_stale_linked_pr",
+    "failure_mode": "Sees a linked PR and assumes progress, missing that the PR itself is old and abandoned.",
+    "inputs": {
+      "issue": "Title: Rewrite the config loader to support YAML anchors\nLabels: enhancement\nBody: See linked PR #402 for the initial attempt.",
+      "signals": "days_open: 600\ncomment_count: 3\nhas_linked_pr: true"
+    },
+    "expected": { "verdict": "stale", "verdict_must_mention": "linked PR exists but the issue has been dormant for well over a year" }
+  },
+  {
+    "name": "healthy_short_lived_active",
+    "failure_mode": "Treats a very new issue with few comments as vague or unhealthy by default.",
+    "inputs": {
+      "issue": "Title: NullPointerException in OrderValidator.validate()\nLabels: bug\nBody: Calling validate(null) throws NPE instead of returning a validation error. Fix: add a null check at the top of validate() that returns ValidationResult.invalid('order is required').",
+      "signals": "days_open: 1\ncomment_count: 0\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "clear cause and a concrete proposed fix despite being brand new" }
+  },
+  {
+    "name": "mislabelled_help_wanted_deep_refactor",
+    "failure_mode": "Assumes 'help wanted' implies approachable, when it can also mean 'we need expert help.'",
+    "inputs": {
+      "issue": "Title: Migrate the ORM layer off the deprecated query builder\nLabels: help wanted\nBody: The query builder we depend on is unmaintained. We need someone to design and execute a migration to a new abstraction across ~200 call sites without changing external API behavior or breaking any of the 40 supported database backends.",
+      "signals": "days_open: 200\ncomment_count: 15\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "mislabelled", "verdict_must_mention": "help wanted here means expert help, not beginner-approachable — a 200-call-site cross-backend migration" }
+  },
+  {
+    "name": "vague_reproduction_impossible",
+    "failure_mode": "Treats an issue mentioning specific version numbers as sufficiently detailed even though the actual failure is undescribed.",
+    "inputs": {
+      "issue": "Title: Broken on v3.2\nLabels: bug\nBody: Upgraded from v3.1 to v3.2 and now it's broken. Using Node 18 on macOS.",
+      "signals": "days_open: 10\ncomment_count: 2\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "vague", "verdict_must_mention": "version and OS given but no description of what actually fails" }
+  },
+  {
+    "name": "healthy_small_good_first_genuinely_small",
+    "failure_mode": "Applies excess suspicion to every good-first-issue label after seeing several mislabelled examples, flagging one that is actually fine.",
+    "inputs": {
+      "issue": "Title: Add a --version flag to the CLI\nLabels: good first issue\nBody: `mycli --version` should print the package version from package.json and exit 0. No flag exists yet; see how --help is implemented in cli.js for the pattern to follow.",
+      "signals": "days_open: 6\ncomment_count: 1\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "small, self-contained, with an existing pattern to follow" }
+  },
+  {
+    "name": "mislabelled_hidden_concurrency_complexity",
+    "failure_mode": "Judges scope from the title alone ('add a cache') and misses that the body requires solving cache invalidation under concurrent writers.",
+    "inputs": {
+      "issue": "Title: Add caching to the pricing service\nLabels: good first issue, performance\nBody: Pricing lookups hit the DB every time. Add a cache. Note: prices can change mid-request from concurrent admin updates, so the cache needs to invalidate correctly without serving a stale price during a race, and multiple app instances share no memory.",
+      "signals": "days_open: 55\ncomment_count: 11\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "mislabelled", "verdict_must_mention": "distributed cache invalidation under concurrent writes is not a beginner task despite the simple title" }
+  },
+  {
+    "name": "healthy_stale_but_recently_revived",
+    "failure_mode": "Sees a high days_open value and flags stale without noticing recent comment activity contradicts it.",
+    "inputs": {
+      "issue": "Title: Support relative dates in the date picker\nLabels: enhancement\nBody: Comments show renewed interest and a maintainer just proposed an implementation approach two days ago; work is starting now.",
+      "signals": "days_open: 300\ncomment_count: 22\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "healthy", "verdict_must_mention": "old but recently revived with an active maintainer proposal" }
+  },
+  {
+    "name": "vague_title_only_no_body",
+    "failure_mode": "Treats an empty issue body as acceptable because the title alone seems to convey intent.",
+    "inputs": {
+      "issue": "Title: Login doesn't work\nLabels: bug, good first issue\nBody: (no description provided)",
+      "signals": "days_open: 4\ncomment_count: 0\nhas_linked_pr: false"
+    },
+    "expected": { "verdict": "vague", "verdict_must_mention": "no body content at all beyond the title" }
+  }
+]

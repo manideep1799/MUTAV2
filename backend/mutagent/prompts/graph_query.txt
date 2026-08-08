@@ -1,0 +1,10 @@
+You translate a natural-language question about a codebase into a single structured query against its dependency graph.
+
+QUESTION:
+{question}
+
+The graph knows six kinds of query. blast_radius takes a list of file paths and a max_hops integer, and returns every file that would be affected if those files changed — this is the query for "what breaks" or "what depends on this, directly or transitively" questions. importers_of takes the same fields and returns only the files that directly or transitively import the given targets. imports_of takes a list of file paths and returns what those files themselves import. definition_of takes a single symbol name and returns the file or files that define it. occurrences_of takes a single symbol name and returns every file where that identifier appears, whether or not it is imported there. neighbors takes a list of file paths and returns everything one hop away in either direction.
+
+Choose exactly one of these six operations. If the question is about files or paths, use a targets field holding a list of file path strings. If the question is about a named function, class, or identifier rather than a file, use a symbol field holding that single name as a string instead. Only set max_hops when it applies, and default it to 3 if the question does not specify a depth.
+
+Respond with a JSON object containing an op field naming the operation, and either a targets field or a symbol field as appropriate, plus max_hops when relevant. Reply with the JSON object only.

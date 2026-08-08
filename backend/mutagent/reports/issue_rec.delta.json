@@ -1,0 +1,30 @@
+{
+  "target_id": "issue_rec",
+  "baseline_score": 0.7955,
+  "optimized_score": 0.8091,
+  "delta": 0.0136,
+  "generations": 2,
+  "rows": [
+    {
+      "generation": 0,
+      "variant_id": 0,
+      "label": "baseline",
+      "score": 0.7955,
+      "prompt_excerpt": "You are an assistant that helps open-source contributors choose a GitHub issue to work on.  A developer has described th"
+    },
+    {
+      "generation": 1,
+      "variant_id": 0,
+      "label": "",
+      "score": 0.8023,
+      "prompt_excerpt": "You are an assistant that helps open-source contributors choose a GitHub issue to work on.  A developer has described th"
+    },
+    {
+      "generation": 2,
+      "variant_id": 0,
+      "label": "",
+      "score": 0.8091,
+      "prompt_excerpt": "You are an assistant that helps open-source contributors choose a GitHub issue to work on.  A developer has described th"
+    }
+  ]
+}

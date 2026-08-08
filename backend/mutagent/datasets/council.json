@@ -1,0 +1,146 @@
+[
+  {
+    "name": "vector_conceptual_simple",
+    "failure_mode": "Routes a plain conceptual question to the graph.",
+    "inputs": { "query": "How does the authentication middleware work?" },
+    "expected": { "accept": true, "route": "vector", "sub_query_count": 1, "sub_query_routes": ["vector"] }
+  },
+  {
+    "name": "vector_explain_algorithm",
+    "failure_mode": "Treats an explanation request as structural.",
+    "inputs": { "query": "Explain how the retry backoff is calculated." },
+    "expected": { "accept": true, "route": "vector", "sub_query_count": 1, "sub_query_routes": ["vector"] }
+  },
+  {
+    "name": "graph_blast_radius",
+    "failure_mode": "Sends a change-impact question to semantic search, which cannot answer it.",
+    "inputs": { "query": "What breaks if I change the login function?" },
+    "expected": { "accept": true, "route": "graph", "sub_query_count": 1, "sub_query_routes": ["graph"] }
+  },
+  {
+    "name": "graph_importers",
+    "failure_mode": "Routes a dependency question to the vector store.",
+    "inputs": { "query": "Which files import config.py?" },
+    "expected": { "accept": true, "route": "graph", "sub_query_count": 1, "sub_query_routes": ["graph"] }
+  },
+  {
+    "name": "graph_definition_lookup",
+    "failure_mode": "Uses embeddings for an exact-symbol lookup the identifier index answers precisely.",
+    "inputs": { "query": "Where is parse_config defined?" },
+    "expected": { "accept": true, "route": "graph", "sub_query_count": 1, "sub_query_routes": ["graph"] }
+  },
+  {
+    "name": "graph_callers_of_symbol",
+    "failure_mode": "Misses that 'who calls' is a structural traversal.",
+    "inputs": { "query": "Who calls the send_email helper?" },
+    "expected": { "accept": true, "route": "graph", "sub_query_count": 1, "sub_query_routes": ["graph"] }
+  },
+  {
+    "name": "hybrid_concept_then_structure",
+    "failure_mode": "Picks one route when the question genuinely needs both.",
+    "inputs": { "query": "Which modules are involved in rate limiting?" },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 1, "sub_query_routes": ["hybrid"] }
+  },
+  {
+    "name": "hybrid_find_then_trace",
+    "failure_mode": "Routes to graph alone when the target must first be found semantically.",
+    "inputs": { "query": "Find the error-handling code and show what depends on it." },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 1, "sub_query_routes": ["hybrid"] }
+  },
+  {
+    "name": "reject_not_about_code",
+    "failure_mode": "Accepts a question a code repository cannot answer.",
+    "inputs": { "query": "What is the weather in Hyderabad today?" },
+    "expected": { "accept": false, "failing_property": "answerability", "route": null, "sub_query_count": 1, "sub_query_routes": [] }
+  },
+  {
+    "name": "reject_too_vague",
+    "failure_mode": "Accepts a query with nothing concrete to retrieve against.",
+    "inputs": { "query": "Tell me about the code." },
+    "expected": { "accept": false, "failing_property": "specificity", "route": null, "sub_query_count": 1, "sub_query_routes": [] }
+  },
+  {
+    "name": "reject_unintelligible",
+    "failure_mode": "Attempts to route a query it cannot parse.",
+    "inputs": { "query": "the thing with the stuff, you know, fix?" },
+    "expected": { "accept": false, "failing_property": "clarity", "route": null, "sub_query_count": 1, "sub_query_routes": [] }
+  },
+  {
+    "name": "reject_opinion_not_fact",
+    "failure_mode": "Treats a subjective question as answerable from source.",
+    "inputs": { "query": "Is this the best codebase you have ever seen?" },
+    "expected": { "accept": false, "failing_property": "answerability", "route": null, "sub_query_count": 1, "sub_query_routes": [] }
+  },
+  {
+    "name": "split_two_intents_mixed_routes",
+    "failure_mode": "Embeds two intents into one averaged vector, matching neither.",
+    "inputs": { "query": "How does auth work and what breaks if I change it?" },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 2, "sub_query_routes": ["vector", "graph"] }
+  },
+  {
+    "name": "split_two_unrelated_domains",
+    "failure_mode": "Answers only the first question and silently drops the second.",
+    "inputs": { "query": "How does the caching layer work, and how do I run the tests?" },
+    "expected": { "accept": true, "route": "vector", "sub_query_count": 2, "sub_query_routes": ["vector", "vector"] }
+  },
+  {
+    "name": "split_three_intents",
+    "failure_mode": "Splits into two and loses the third question.",
+    "inputs": { "query": "What does the scheduler do, who calls it, and where is it configured?" },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 3, "sub_query_routes": ["vector", "graph", "graph"] }
+  },
+  {
+    "name": "split_both_structural",
+    "failure_mode": "Merges two distinct structural questions into one traversal.",
+    "inputs": { "query": "Which files import database.py, and what would break if I renamed it?" },
+    "expected": { "accept": true, "route": "graph", "sub_query_count": 2, "sub_query_routes": ["graph", "graph"] }
+  },
+  {
+    "name": "dangling_pronoun_it",
+    "failure_mode": "Splits on the conjunction and leaves 'it' unresolved, so the second sub-query retrieves nothing.",
+    "inputs": { "query": "What does the login function do and where is it called?" },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 2, "sub_query_routes": ["vector", "graph"], "sub_queries_must_be_self_contained": true }
+  },
+  {
+    "name": "dangling_pronoun_they",
+    "failure_mode": "Leaves a plural pronoun unbound in the second sub-query.",
+    "inputs": { "query": "Explain the webhook handlers and tell me what they depend on." },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 2, "sub_query_routes": ["vector", "graph"], "sub_queries_must_be_self_contained": true }
+  },
+  {
+    "name": "dangling_reference_that_one",
+    "failure_mode": "Carries a demonstrative reference into a sub-query that cannot stand alone.",
+    "inputs": { "query": "Show me the payment retry logic and who imports that module." },
+    "expected": { "accept": true, "route": "hybrid", "sub_query_count": 2, "sub_query_routes": ["vector", "graph"], "sub_queries_must_be_self_contained": true }
+  },
+  {
+    "name": "oversplit_trap_paired_concepts",
+    "failure_mode": "Splits one question about a single subsystem into two, fragmenting the context.",
+    "inputs": { "query": "How do authentication and authorization work?" },
+    "expected": { "accept": true, "route": "vector", "sub_query_count": 1, "sub_query_routes": ["vector"] }
+  },
+  {
+    "name": "oversplit_trap_conjunction_in_noun",
+    "failure_mode": "Treats a conjunction inside a single noun phrase as a question boundary.",
+    "inputs": { "query": "Where is the read and write buffer allocated?" },
+    "expected": { "accept": true, "route": "graph", "sub_query_count": 1, "sub_query_routes": ["graph"] }
+  },
+  {
+    "name": "oversplit_trap_qualifier",
+    "failure_mode": "Splits a qualifying clause off as if it were a separate question.",
+    "inputs": { "query": "How does the parser handle malformed input and edge cases?" },
+    "expected": { "accept": true, "route": "vector", "sub_query_count": 1, "sub_query_routes": ["vector"] }
+  },
+  {
+    "name": "oversplit_trap_list_of_examples",
+    "failure_mode": "Turns a list of examples inside one question into several questions.",
+    "inputs": { "query": "Which config values control timeouts, such as connect and read timeouts?" },
+    "expected": { "accept": true, "route": "vector", "sub_query_count": 1, "sub_query_routes": ["vector"] }
+  },
+  {
+    "name": "too_many_intents_cap",
+    "failure_mode": "Fans out past the cap instead of answering the first three and saying so.",
+    "inputs": { "query": "What does the API do, how is it deployed, who maintains it, what tests cover it, and how do I contribute?" },
+    "expected": { "accept": false, "failing_property": "scope", "route": null, "sub_query_count": 3, "sub_query_routes": [] }
+  }
+]

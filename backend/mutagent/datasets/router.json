@@ -1,0 +1,140 @@
+[
+  {
+    "name": "graph_explicit_calls",
+    "failure_mode": "Misses an explicit 'calls' relationship as structural.",
+    "inputs": { "query": "List every function that calls send_email." },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "graph_who_else_uses",
+    "failure_mode": "Treats 'who else uses this' as a conceptual search rather than an importer traversal.",
+    "inputs": { "query": "Who else uses the same rate-limiter utility I'm about to change?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "graph_intersection_query",
+    "failure_mode": "Routes a structural set-intersection question to semantic search, which cannot compute it.",
+    "inputs": { "query": "Does anything import both the auth module and the billing module?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "graph_blast_radius_keyword",
+    "failure_mode": "Fails to recognize an explicit impact-analysis phrasing as structural.",
+    "inputs": { "query": "What's the blast radius of deleting utils/legacy_parser.py?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "graph_interface_removal_impact",
+    "failure_mode": "Treats a compile-time impact question as a conceptual one.",
+    "inputs": { "query": "If I delete this interface, will anything else fail to compile?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "vector_similar_code_conceptual",
+    "failure_mode": "Treats 'similar' as a structural relationship rather than semantic similarity.",
+    "inputs": { "query": "Find code similar to the payment retry logic." },
+    "expected": { "route": "vector", "route_rationale": "similarity of behavior is a semantic question — there is no import or identifier edge between two independent implementations of the same idea" }
+  },
+  {
+    "name": "vector_naming_convention",
+    "failure_mode": "Treats a style/convention question as if it were a dependency question.",
+    "inputs": { "query": "What's the naming convention for HTTP handler functions in this repo?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "vector_why_slow",
+    "failure_mode": "Routes a diagnostic explanation to structural traversal, which cannot explain 'why'.",
+    "inputs": { "query": "Why is the build slow?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "vector_config_flags_semantic",
+    "failure_mode": "Treats a config-flag question as a graph query when it is actually asking for an explanation.",
+    "inputs": { "query": "Which config flags affect startup time, and why?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "vector_version_diff",
+    "failure_mode": "Sends a conceptual comparison to the dependency graph, which has no notion of 'v1 vs v2'.",
+    "inputs": { "query": "What's the difference in behavior between the v1 and v2 API handlers?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "vector_howto_procedural",
+    "failure_mode": "Treats a how-to question as if it needed dependency traversal.",
+    "inputs": { "query": "How do I add a new field to the user schema?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "vector_rerender_trigger_conceptual",
+    "failure_mode": "Assumes any question with a code-sounding trigger word is structural.",
+    "inputs": { "query": "What triggers a re-render in the dashboard component?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "hybrid_find_then_understand",
+    "failure_mode": "Picks graph alone when the target must first be located semantically before its structure matters.",
+    "inputs": { "query": "Which modules are involved in rate limiting, and how do they fit together?" },
+    "expected": { "route": "hybrid" }
+  },
+  {
+    "name": "hybrid_who_subscribes_to_state",
+    "failure_mode": "Picks vector alone, missing that 'subscribes to' is a real structural relationship in this domain.",
+    "inputs": { "query": "Which components subscribe to the user-session state, and what does each one do with it?" },
+    "expected": { "route": "hybrid" }
+  },
+  {
+    "name": "hybrid_flow_trace_with_explanation",
+    "failure_mode": "Routes purely to graph, missing that import edges alone cannot express call ORDER, only what depends on what.",
+    "inputs": { "query": "Trace how a request flows through the middleware stack, and explain what each layer does." },
+    "expected": { "route": "hybrid", "route_rationale": "the import graph shows dependency edges, not call order — answering 'flow' needs semantic reading of each layer alongside the structural trace" }
+  },
+  {
+    "name": "hybrid_test_coverage_question",
+    "failure_mode": "Picks one route when the question needs both structural discovery (which files exercise X) and conceptual summary (what those tests actually verify).",
+    "inputs": { "query": "How is the checkout flow tested, and which test files exercise it?" },
+    "expected": { "route": "hybrid" }
+  },
+  {
+    "name": "hybrid_ownership_question",
+    "failure_mode": "Assumes 'who owns X' is answerable from imports alone, when ownership is often documented rather than structural.",
+    "inputs": { "query": "Which service owns the user table, and how is that enforced in code?" },
+    "expected": { "route": "hybrid" }
+  },
+  {
+    "name": "graph_definition_location",
+    "failure_mode": "Uses semantic search for an exact symbol lookup the identifier index answers precisely and cheaply.",
+    "inputs": { "query": "Where exactly is the retry_with_backoff function defined?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "graph_import_direction",
+    "failure_mode": "Confuses 'what does X depend on' with a semantic question about X's purpose.",
+    "inputs": { "query": "What does the billing module import?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "vector_error_message_meaning",
+    "failure_mode": "Treats a question about an error message's meaning as if the error string were a graph node.",
+    "inputs": { "query": "What does the 'stale session token' error mean and when does it happen?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "graph_circular_dependency_check",
+    "failure_mode": "Answers a cycle-detection question from prose instead of the graph, where it can be verified exactly.",
+    "inputs": { "query": "Is there a circular dependency between the auth and session modules?" },
+    "expected": { "route": "graph" }
+  },
+  {
+    "name": "vector_design_rationale",
+    "failure_mode": "Routes a 'why was this built this way' question to structural traversal, which has no notion of rationale.",
+    "inputs": { "query": "Why does this project use polling instead of websockets for updates?" },
+    "expected": { "route": "vector" }
+  },
+  {
+    "name": "hybrid_migration_impact",
+    "failure_mode": "Picks graph alone, missing that assessing migration risk needs reading what the affected code actually does, not just that it is affected.",
+    "inputs": { "query": "If I migrate the database layer to async, what breaks and how risky is each affected caller?" },
+    "expected": { "route": "hybrid" }
+  }
+]

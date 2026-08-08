@@ -15,9 +15,11 @@ from dotenv import load_dotenv
 load_dotenv(override=True)  # reads the ".env" file in this folder
 
 # Mutagent directory paths (single source of truth for prompts, traces, reports)
-PROMPTS_DIR = REPO_ROOT / "backend" / "mutagent" / "prompts"
-TRACES_DIR  = REPO_ROOT / "backend" / "mutagent" / "traces"
-REPORTS_DIR = REPO_ROOT / "backend" / "mutagent" / "reports"
+PROMPTS_DIR  = REPO_ROOT / "backend" / "mutagent" / "prompts"
+TRACES_DIR   = REPO_ROOT / "backend" / "mutagent" / "traces"
+REPORTS_DIR  = REPO_ROOT / "backend" / "mutagent" / "reports"
+DATASETS_DIR = REPO_ROOT / "backend" / "mutagent" / "datasets"
+RUBRICS_DIR  = REPO_ROOT / "backend" / "mutagent" / "rubrics"
 
 
 class Settings:
@@ -40,6 +42,19 @@ class Settings:
 
     HYDE_ENABLED: bool = os.getenv("HYDE_ENABLED", "true").lower() == "true"
 
+    # Aliases for Mutagent CLI compatibility (mutagent/run.py, run_graph_query.py)
+    @property
+    def groq_model(self): return self.LLM_MODEL
+
+    @property
+    def groq_api_key(self): return self.GROQ_API_KEY
+
+    @property
+    def github_token(self): return self.GITHUB_TOKEN
+
+    @property
+    def groq_base_url(self): return "https://api.groq.com/openai/v1"
+
 
 settings = Settings()
 
@@ -58,3 +73,15 @@ def repo_id_from_url(repo_url: str) -> str:
     """
     slug = repo_url.rstrip("/").split("github.com/")[-1].removesuffix(".git")
     return slug.replace("/", "__")
+
+
+def load_dataset(name: str) -> list[dict]:
+    import json
+    path = DATASETS_DIR / f"{name}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_rubric(name: str) -> dict:
+    import json
+    path = RUBRICS_DIR / f"{name}.json"
+    return json.loads(path.read_text(encoding="utf-8"))

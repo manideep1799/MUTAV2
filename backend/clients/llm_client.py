@@ -10,14 +10,26 @@ _client: OpenAI | None = None
 def _get() -> OpenAI:
     global _client
     if _client is None:
-        _client = OpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+        if settings.OLLAMA_BASE_URL:
+            _client = OpenAI(
+                api_key="ollama",
+                base_url=settings.OLLAMA_BASE_URL,
+                timeout=120.0,
+                default_headers={"ngrok-skip-browser-warning": "true"},
+            )
+        else:
+            _client = OpenAI(
+                api_key=settings.GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1",
+                timeout=120.0,
+            )
     return _client
 
 
-MAX_RETRIES = 5
+MAX_RETRIES = 10
 
 
-def complete(prompt: str, *, temperature: float = 0.2, max_tokens: int = 1024) -> tuple[str, float]:
+def complete(prompt: str, *, temperature: float = 0.2, max_tokens: int = 1024, json_mode: bool = False) -> tuple[str, float]:
     """Single-turn completion. Returns (text, latency_ms).
 
     Retries on rate limits with exponential backoff.
@@ -25,12 +37,16 @@ def complete(prompt: str, *, temperature: float = 0.2, max_tokens: int = 1024) -
     t0 = time.perf_counter()
     for attempt in range(MAX_RETRIES):
         try:
-            resp = _get().chat.completions.create(
-                model=settings.LLM_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            kwargs = {
+                "model": settings.LLM_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+
+            resp = _get().chat.completions.create(**kwargs)
             latency_ms = (time.perf_counter() - t0) * 1000
             return resp.choices[0].message.content or "", latency_ms
         except Exception as exc:  # noqa: BLE001
@@ -92,7 +108,7 @@ def extract_json(text: str) -> dict | None:
 def json_complete(prompt: str, *, temperature: float = 0.1, max_tokens: int = 1024) -> tuple[dict | list, str, float]:
     """Complete and parse JSON. Returns (parsed, raw_text, latency_ms).
     Raises ValueError if the response is not extractable as JSON."""
-    text, latency_ms = complete(prompt, temperature=temperature, max_tokens=max_tokens)
+    text, latency_ms = complete(prompt, temperature=temperature, max_tokens=max_tokens, json_mode=True)
     parsed = extract_json(text)
     if parsed is None:
         raise ValueError(f"could not extract JSON from model output: {text[:200]!r}")
